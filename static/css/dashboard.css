@@ -38,3 +38,36 @@
 @media (max-width: 900px) {
   .grid-main { grid-template-columns: 1fr; }
 }
+
+
+/* ---- Employees list (Part 1) ------------------------------------------- */
+
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.page-head .btn { margin-top: 0.5rem; }
+.mt-5 { margin-top: var(--space-5); }
+.small { font-size: 0.8125rem; }
+.right { text-align: right; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.toolbar-search { width: 18rem; max-width: 100%; }
+.toolbar-select { width: 13rem; max-width: 100%; }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+.chip {
+  padding: 0.25rem 0.75rem; border-radius: var(--radius-pill);
+  background: var(--soft); color: var(--muted); font-size: 0.8125rem; text-decoration: none;
+}
+.chip[aria-current="true"] { background: var(--primary); color: var(--on-primary); font-weight: 700; }
+
+.empty-cell { padding: 1.5rem 0.75rem; text-align: center; color: var(--muted); }
+
+.pager {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: var(--space-3); padding: 0.875rem 0.75rem 0.25rem; font-size: 0.875rem;
+}
+.pager nav { display: flex; gap: var(--space-1); }
+.pager nav a, .pager .page {
+  padding: 0.25rem 0.625rem; border-radius: var(--radius-sm); color: var(--text); text-decoration: none;
+}
+.pager nav a:hover { background: var(--soft); }
+.pager nav a[aria-current="page"] { background: var(--primary); color: var(--on-primary); font-weight: 700; }

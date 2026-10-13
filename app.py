@@ -3,9 +3,17 @@ from datetime import datetime, timedelta
 
 from flask import Flask, abort, redirect, render_template, request, session, url_for
 
+try:                                  # .env support is optional
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+import admin
 import auth
 import db
 import queries
+from shell import safe_url, shell_context
 
 app = Flask(__name__)
 app.config.update(
@@ -17,6 +25,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),   # for "Keep me signed in"
 )
 app.register_blueprint(auth.bp)
+app.register_blueprint(admin.bp)
 db.init_app(app)
 
 # The product name lives in ONE place.
@@ -28,7 +37,7 @@ APP_TAGLINE = "RFID attendance for teams"
 def inject_globals():
     """Available in every template."""
     return {"APP_NAME": APP_NAME, "APP_TAGLINE": APP_TAGLINE,
-            "csrf_token": auth.csrf_token}
+            "csrf_token": auth.csrf_token, "safe_url": safe_url}
 
 
 @app.after_request
@@ -39,43 +48,7 @@ def no_store_when_signed_in(response):
     return response
 
 
-# ---- Menus and the shared page frame ----------------------------------------
-
-def nav_for(role):
-    home = url_for(auth.ROLE_HOME[role])
-    if role == "admin":
-        return [
-            {"label": "Manage", "links": [
-                {"name": "Overview", "href": home},
-                {"name": "Employees", "href": "#"}, {"name": "Cards", "href": "#"},
-                {"name": "Users", "href": "#"}, {"name": "Settings", "href": "#"}]},
-            {"label": "Records", "links": [
-                {"name": "Attendance", "href": "#"}, {"name": "Reports", "href": "#"}]},
-        ]
-    if role == "hr":
-        return [{"label": "Records", "links": [
-            {"name": "Today", "href": home}, {"name": "Attendance", "href": "#"},
-            {"name": "Reports", "href": "#"}, {"name": "Employees", "href": "#"}]}]
-    return [{"label": "My attendance", "links": [{"name": "This month", "href": home}]}]
-
-
-ACTIVE_LINK = {"admin": "Overview", "hr": "Today", "employee": "This month"}
-
-
-def initials(name):
-    parts = name.split()
-    return (parts[0][0] + parts[1][0] if len(parts) > 1 else name[:2]).upper()
-
-
-def shell_context():
-    user = session["user"]
-    role = user["role"]
-    return {
-        "nav": nav_for(role), "active": ACTIVE_LINK[role],
-        "role_label": auth.ROLE_LABELS[role],
-        "user_name": user["name"], "user_initials": initials(user["name"]),
-    }
-
+# ---- Placeholder pages (HR and Employee, until they are built) ---------------
 
 def placeholder(title):
     role = session["user"]["role"]
@@ -166,5 +139,16 @@ def not_found(_):
     return error_page(404, "Page not found", "We couldn't find that page.")
 
 
+def startup_checks():
+    """Friendly hints printed when you run `python app.py`."""
+    if app.config["SECRET_KEY"] == "dev-only-change-me":
+        print("NOTE: using the development secret key. Put TALLYO_SECRET_KEY in .env before real use.")
+    conn = db.connect(app.config["DATABASE"])
+    if conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
+        print("NOTE: no users yet. Run  python seed.py  to create the demo data.")
+    conn.close()
+
+
 if __name__ == "__main__":
+    startup_checks()
     app.run(debug=True)

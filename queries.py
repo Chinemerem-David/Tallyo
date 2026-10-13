@@ -71,3 +71,73 @@ def attention_items(db, today):
                                else "%d employees have no card" % len(names),
                       "detail": _names(names) + ".", "action": "Assign cards", "href": "#"})
     return items
+
+
+# ---- Employees list ----------------------------------------------------------
+
+PER_PAGE = 10
+_NO_ACTIVE_CARD = ("NOT EXISTS (SELECT 1 FROM cards c "
+                   "WHERE c.employee_id = e.id AND c.status = 'active')")
+
+
+def _like(text):
+    """Make user text safe inside LIKE: % and _ are wildcards otherwise."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def employee_counts(db):
+    return dict(db.execute(f"""
+        SELECT SUM(is_active = 1) AS active, SUM(is_active = 0) AS inactive,
+               SUM(is_active = 1 AND {_NO_ACTIVE_CARD}) AS no_card
+        FROM employees e""").fetchone())
+
+
+def departments(db):
+    return [r[0] for r in db.execute("SELECT DISTINCT department FROM employees ORDER BY 1")]
+
+
+def page_numbers(page, pages):
+    """[1, None, 4, 5, 6, None, 9]: None means an ellipsis."""
+    if pages <= 7:
+        return list(range(1, pages + 1))
+    wanted = sorted({1, pages, page - 1, page, page + 1} & set(range(1, pages + 1)))
+    out = []
+    for n in wanted:
+        if out and n - out[-1] > 1:
+            out.append(None)
+        out.append(n)
+    return out
+
+
+def list_employees(db, q="", dept="", status="", page=1, per_page=PER_PAGE):
+    """status: '' = active people, 'no_card' = active without a card, 'inactive'."""
+    where, params = [], []
+    where.append("e.is_active = 0" if status == "inactive" else "e.is_active = 1")
+    if status == "no_card":
+        where.append(_NO_ACTIVE_CARD)
+    if dept:
+        where.append("e.department = ?"); params.append(dept)
+    if q:
+        where.append("(e.full_name LIKE ? ESCAPE '\\' OR e.employee_code LIKE ? ESCAPE '\\')")
+        params += ["%" + _like(q) + "%"] * 2
+    clause = " AND ".join(where)
+
+    total = db.execute(f"SELECT COUNT(*) FROM employees e WHERE {clause}", params).fetchone()[0]
+    pages = max((total + per_page - 1) // per_page, 1)
+    page = min(max(page, 1), pages)
+    rows = db.execute(f"""
+        SELECT e.*, (SELECT c.uid FROM cards c
+                     WHERE c.employee_id = e.id AND c.status = 'active') AS card_uid
+        FROM employees e WHERE {clause}
+        ORDER BY e.full_name COLLATE NOCASE LIMIT ? OFFSET ?""",
+        params + [per_page, (page - 1) * per_page]).fetchall()
+
+    people = []
+    for r in rows:
+        p = dict(r)
+        parts = p["full_name"].split()
+        p["initials"] = (parts[0][0] + parts[-1][0]).upper()
+        people.append(p)
+    return {"rows": people, "total": total, "page": page, "pages": pages,
+            "first": (page - 1) * per_page + 1 if total else 0,
+            "last": min(page * per_page, total), "numbers": page_numbers(page, pages)}
