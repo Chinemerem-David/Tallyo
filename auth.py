@@ -56,7 +56,12 @@ def verify_csrf():
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if "user" not in session:
+        user = session.get("user")
+        if not user:
+            return redirect(url_for("auth.login"))
+        row = get_db().execute("SELECT is_active FROM users WHERE id = ?", (user["id"],)).fetchone()
+        if row is None or not row["is_active"]:       # deactivated since they signed in
+            session.clear()
             return redirect(url_for("auth.login"))
         return view(*args, **kwargs)
     return wrapped

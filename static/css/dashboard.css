@@ -71,3 +71,21 @@
 }
 .pager nav a:hover { background: var(--soft); }
 .pager nav a[aria-current="page"] { background: var(--primary); color: var(--on-primary); font-weight: 700; }
+
+
+/* ---- Employee form (Part 2) --------------------------------------------- */
+
+.back { font-size: 0.9375rem; text-decoration: none; }
+.form-card { max-width: 44rem; }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0 var(--space-4);
+}
+.field-error { display: block; margin-top: var(--space-1); font-size: 0.8125rem; color: var(--bad-fg); }
+.input[aria-invalid="true"] { border-color: var(--bad-fg); }
+.input[readonly] { background: var(--soft); color: var(--muted); }
+.check-line { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.check-line input { width: 1rem; height: 1rem; accent-color: var(--primary); }
+.form-actions { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-5); }
+.alert-success { background: var(--ok-bg); color: var(--ok-fg); }

@@ -8,6 +8,7 @@
       <h1 class="page-title">Employees</h1>
       <p class="muted mt-1">{{ counts.active }} people · {{ counts.no_card }} without a card</p>
     </div>
+    <a class="btn" href="{{ url_for('admin.employee_new') }}">+ Add employee</a>
   </div>
 
   <form class="toolbar mt-5" method="get" action="{{ url_for('admin.employees') }}">

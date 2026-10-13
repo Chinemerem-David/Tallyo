@@ -141,3 +141,7 @@ def list_employees(db, q="", dept="", status="", page=1, per_page=PER_PAGE):
     return {"rows": people, "total": total, "page": page, "pages": pages,
             "first": (page - 1) * per_page + 1 if total else 0,
             "last": min(page * per_page, total), "numbers": page_numbers(page, pages)}
+
+
+def get_employee(db, employee_id):
+    return db.execute("SELECT * FROM employees WHERE id = ?", (employee_id,)).fetchone()
