@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{# Frame for sign-in style pages: form on the left, animated panel on the right. #}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block body %}
+<div class="auth">
+  <main class="auth-main">
+    <a class="auth-brand" href="{{ url_for('home') }}">
+      {% include "partials/logo.html" %}
+    </a>
+    {% block form %}{% endblock %}
+  </main>
+
+  <aside class="auth-panel" aria-hidden="true">
+    {% include "partials/wallet.html" %}
+    <p class="auth-caption">One tap in the morning.<br>One on the way out.</p>
+  </aside>
+
+  <div class="auth-toggle">
+    {% include "partials/theme_toggle.html" %}
+  </div>
+</div>
+{% endblock %}

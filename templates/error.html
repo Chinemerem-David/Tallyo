@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ APP_NAME }}{% endblock %}
+
+{% block body %}
+<main class="center-page">
+  <div class="card card-pad center-card">
+    <p class="muted">Error {{ code }}</p>
+    <h1 class="page-title mt-1">{{ title }}</h1>
+    <p class="muted mt-3">{{ message }}</p>
+    <a class="btn mt-6" href="{{ url_for('home') }}">Back to {{ APP_NAME }}</a>
+  </div>
+</main>
+{% endblock %}

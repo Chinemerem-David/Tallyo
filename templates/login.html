@@ -1,0 +1,53 @@
+{% extends "auth.html" %}
+{% block title %}Sign in · {{ APP_NAME }}{% endblock %}
+
+{% block form %}
+<form id="login-form" class="auth-form" method="post" action="{{ url_for('auth.login') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <h1 class="auth-title">Welcome back.</h1>
+  <p class="auth-sub" id="login-sub">{{ current.sub }}</p>
+
+  {# Radio buttons styled as tabs: they work even if JavaScript fails. #}
+  <fieldset class="role-tabs">
+    <legend class="visually-hidden">Sign in as</legend>
+    {% for r in roles %}
+      <input type="radio" name="role" id="role-{{ r.key }}" value="{{ r.key }}"
+             data-label="{{ r.label }}" data-placeholder="{{ r.placeholder }}"
+             data-sub="{{ r.sub }}" data-note="{{ r.note }}"
+             {% if r.key == current.key %}checked{% endif %}>
+      <label for="role-{{ r.key }}">{{ r.tab }}</label>
+    {% endfor %}
+  </fieldset>
+
+  {% if error %}
+    <div class="alert alert-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <label class="field">
+    <span class="field-label" id="username-label">{{ current.label }}</span>
+    <input class="input" id="username" name="username" type="text" value="{{ username }}"
+           placeholder="{{ current.placeholder }}" autocomplete="username"
+           autocapitalize="none" spellcheck="false" required autofocus>
+  </label>
+
+  <label class="field">
+    <span class="field-label">Password</span>
+    <input class="input" name="password" type="password"
+           placeholder="Enter your password" autocomplete="current-password" required>
+  </label>
+
+  <div class="auth-options">
+    <label class="check"><input type="checkbox" name="remember"> Keep me signed in</label>
+    <a class="auth-link" href="#">Forgot password?</a>
+  </div>
+
+  <button class="btn btn-block" type="submit">Sign in</button>
+
+  <p class="auth-note" id="role-note" {% if not current.note %}hidden{% endif %}>{{ current.note }}</p>
+</form>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}
