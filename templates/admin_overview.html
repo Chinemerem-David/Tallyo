@@ -1,0 +1,46 @@
+{% extends "app_shell.html" %}
+{% block title %}Overview · {{ APP_NAME }}{% endblock %}
+
+{% block sidebar_footer %}<span class="dot"></span> Reader connected{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">{{ greeting }}, {{ first_name }}.</h1>
+  <p class="muted mt-1">{{ date_label }} · {{ stats.present }} of {{ stats.total }} employees are in</p>
+
+  <div class="grid-cards mt-6">
+    <div class="card tile"><div class="tile-label">Present</div><div class="tile-value">{{ stats.present }}</div></div>
+    <div class="card tile"><div class="tile-label">Late</div><div class="tile-value">{{ stats.late }}</div></div>
+    <div class="card tile"><div class="tile-label">Not in yet</div><div class="tile-value">{{ stats.not_in }}</div></div>
+    <div class="card tile"><div class="tile-label">Without a card</div><div class="tile-value">{{ stats.no_card }}</div></div>
+  </div>
+
+  <div class="grid-main">
+    <section class="card">
+      <div class="card-head"><h2 class="section-title">Latest taps today</h2></div>
+      {% for tap in taps %}
+        <div class="list-row">
+          <span class="avatar">{{ tap.initials }}</span>
+          <span class="grow">{{ tap.name }}</span>
+          <span class="muted">{{ tap.time }}</span>
+          <span class="{{ tap.css }} pill-fixed">{{ tap.label }}</span>
+        </div>
+      {% else %}
+        <p class="empty">No taps yet today.</p>
+      {% endfor %}
+    </section>
+
+    <section class="card card-pad">
+      <h2 class="section-title">Needs your attention</h2>
+      <p class="muted attention-sub">Only admins see this</p>
+      {% for item in attention %}
+        <div class="attention-item">
+          <div class="attention-title">{{ item.title }}</div>
+          <div class="attention-detail">{{ item.detail }}</div>
+          <a class="attention-action" href="{{ item.href }}">{{ item.action }}</a>
+        </div>
+      {% else %}
+        <p class="empty-inline">All clear. Nothing needs your attention.</p>
+      {% endfor %}
+    </section>
+  </div>
+{% endblock %}

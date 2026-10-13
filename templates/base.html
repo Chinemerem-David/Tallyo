@@ -1,29 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
 
-    <!-- Runs BEFORE he page paints, so a dark-mode user never sees a white flash. -->
-     <script>
-        (function() {
-            var saved = null;
-            try { saved = localStorage.getItem("theme"); } catch (e) {}
-            var perfersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-            document.documentElement.setAttribute("data-theme", saved || (prefersDark ? "dark" : "light"));
-        })();
-     </script>
+  <!-- Runs BEFORE the page paints, so a dark-mode user never sees a white flash. -->
+  <script>
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem("theme"); } catch (e) {}
+      var prefersDark = window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute(
+        "data-theme", saved || (prefersDark ? "dark" : "light"));
+    })();
+  </script>
 
-     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg' ) }}">
-     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css' ) }}">
-     {% block head %}{% endblock %}
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  {% block head %}{% endblock %}
 </head>
-
 <body class="{% block body_class %}{% endblock %}">
-    {% block body %}{% endblock %}
+  {% block body %}{% endblock %}
 
-    <script src="{{ url_for('static', filename='js/theme.js' ) }}"></script>
-    {% block scripts %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

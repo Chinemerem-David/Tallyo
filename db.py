@@ -1,4 +1,5 @@
 """SQLite connection helpers."""
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -60,6 +61,6 @@ def close_db(_error=None):
 
 
 def init_app(app):
-    app.config.setdefault("DATABASE", str(DEFAULT_DB))
+    app.config.setdefault("DATABASE", os.environ.get("TALLYO_DATABASE", str(DEFAULT_DB)))
     ensure_schema(app.config["DATABASE"])     # creates empty tables on first run
     app.teardown_appcontext(close_db)

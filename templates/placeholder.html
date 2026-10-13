@@ -1,16 +1,17 @@
 {% extends "app_shell.html" %}
-{% block title %}{{ title }} . {{ APP_NAME }}{% endblock %}
+{% block title %}{{ title }} · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-    <h1 class=""page-title>{{ title }}</h1>
-    <p class="muted mt-1">Signed in as {{ user_name }}({{ role_label }}). The real page is built in a later step.</p>
-    <div class="card card-pad mt-6">
-        <h2 class="section-title">Test the role protection</h2>
-        <p class="muted mt-1">These pages belong to other roles. Opening them should be refused.</p>
-        <div class="row wrap gap-3 mt-4">
-            {% for label, href in others %}
-                <a class="btn btn-secondary" href="{{ href }}">{{ label }}</a>
-            {% endfor %}
-        </div>
+  <h1 class="page-title">{{ title }}</h1>
+  <p class="muted mt-1">Signed in as {{ user_name }} ({{ role_label }}). The real page is built in a later step.</p>
+
+  <div class="card card-pad mt-6">
+    <h2 class="section-title">Test the role protection</h2>
+    <p class="muted mt-1">These pages belong to other roles. Opening them should be refused.</p>
+    <div class="row wrap gap-3 mt-4">
+      {% for label, href in others %}
+        <a class="btn btn-secondary" href="{{ href }}">{{ label }}</a>
+      {% endfor %}
     </div>
+  </div>
 {% endblock %}

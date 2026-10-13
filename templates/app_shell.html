@@ -1,38 +1,45 @@
 {% extends "base.html" %}
 
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
 {# The frame used by the Admin, HR and Employee pages: sidebar + top bar. #}
 {% block body %}
-    <div class="shell">
-        <aside class="sidebar">
-            <a class="sidebar-brand" href="{{ url_for('home' ) }}">
-                {% include "partials/logo.html" %}
-            </a>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="sidebar-brand" href="{{ url_for('home') }}">
+      {% include "partials/logo.html" %}
+    </a>
 
-            <nav aria-label="Main menu">
-                {% for group in nav %}
-                    <div class="nav-label">{{ group.label }}</div>
-                    {% for link in group.links %}
-                    <a class="nav-link" href="{{ link.href }}"
-                        {% if link.name == active %}aria-current="page"{% endif %}>{{ link.name }}</a>
-                    {% endfor %}
-                {% endfor %}
-            </nav>
+    <nav aria-label="Main menu">
+      {% for group in nav %}
+        <div class="nav-label">{{ group.label }}</div>
+        {% for link in group.links %}
+          <a class="nav-link" href="{{ link.href }}"
+             {% if link.name == active %}aria-current="page"{% endif %}>{{ link.name }}</a>
+        {% endfor %}
+      {% endfor %}
+    </nav>
 
-            <div class="sidebar-footer">{% block sidebar_footer %}{% endblock %}</div>
-        </aside>
+    <div class="sidebar-footer">{% block sidebar_footer %}{% endblock %}</div>
+  </aside>
 
-        <div class="main">
-            <header class="topbar">
-                {% include "partials/theme_toggle.html" %}
-                <span class="pill">{{ role_label }}</span>
-                <span class="avatar avatar-accent">{{ user_initials }}</span>
-                <span>{{ user_name }}</span>
-                <a class="muted" href="#">Sign out</a>
-            </header>
+  <div class="main">
+    <header class="topbar">
+      {% include "partials/theme_toggle.html" %}
+      <span class="pill">{{ role_label }}</span>
+      <span class="avatar avatar-accent">{{ user_initials }}</span>
+      <span>{{ user_name }}</span>
+      <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="link-button muted" type="submit">Sign out</button>
+      </form>
+    </header>
 
-            <main class="content">
-                {% block content %}{% endblock %}
-            </main>
-        </div>
-    </div>
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
 {% endblock %}

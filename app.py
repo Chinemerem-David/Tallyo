@@ -1,9 +1,11 @@
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 
-from flask import Flask, abort, redirect, render_template, session, url_for
+from flask import Flask, abort, redirect, render_template, request, session, url_for
 
 import auth
+import db
+import queries
 
 app = Flask(__name__)
 app.config.update(
@@ -15,22 +17,23 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),   # for "Keep me signed in"
 )
 app.register_blueprint(auth.bp)
+db.init_app(app)
 
-# The product name lives in ONE place. Rename it here and every page, title and logo updates, because templates read these two values.
-
+# The product name lives in ONE place.
 APP_NAME = "Tallyo"
 APP_TAGLINE = "RFID attendance for teams"
 
+
 @app.context_processor
-def inject_brand():
-    """Make APP_NAME and APP_TAGLINE available in every template."""
-    return {"APP_NAME": APP_NAME, "APP_TAGLINE": APP_TAGLINE, "csrf_token": auth.csrf_token}
+def inject_globals():
+    """Available in every template."""
+    return {"APP_NAME": APP_NAME, "APP_TAGLINE": APP_TAGLINE,
+            "csrf_token": auth.csrf_token}
 
 
 @app.after_request
 def no_store_when_signed_in(response):
     """Stops the Back button from showing a signed-in page after sign-out."""
-    from flask import request
     if "user" in session and request.endpoint != "static":
         response.headers["Cache-Control"] = "no-store"
     return response
@@ -82,21 +85,6 @@ def placeholder(title):
     return render_template("placeholder.html", title=title, others=others,
                            **shell_context())
 
-# Temporary menu data. Later this will depend on the signed-in user's role.
-#ADMIN_NAV = [
-    {"label": "Manage", "links": [
-        {"name": "Overview", "href": "#"},
-        {"name": "Employees", "href": "#"},
-        {"name": "Cards", "href": "#"},
-        {"name": "Users", "href": "#"},
-        {"name": "Settings", "href": "#"},
-    ]},
-    {"label": "Records", "links": [
-        {"name": "Attendance", "href": "#"},
-        {"name": "Reports", "href": "#"},
-    ]},
-#]
-
 
 # ---- Pages -------------------------------------------------------------------
 
@@ -108,10 +96,25 @@ def home():
     return redirect(url_for("auth.login"))
 
 
+def greeting(now):
+    return "Good morning" if now.hour < 12 else "Good afternoon" if now.hour < 18 else "Good evening"
+
+
 @app.route("/admin")
 @auth.role_required("admin")
 def admin_home():
-    return placeholder("Admin dashboard")
+    now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    conn = db.get_db()
+    return render_template(
+        "admin_overview.html",
+        stats=queries.overview_stats(conn, today),
+        taps=queries.latest_taps(conn, today),
+        attention=queries.attention_items(conn, today),
+        greeting=greeting(now),
+        first_name=session["user"]["name"].split()[0],
+        date_label="%s %d %s" % (now.strftime("%A"), now.day, now.strftime("%B")),
+        **shell_context())
 
 
 @app.route("/hr")
@@ -130,14 +133,14 @@ def portal_home():
 def style_guide():
     if not app.debug:               # developer page only
         abort(404)
-    return render_template(
-        "style_guide.html", nav=nav_for("admin") if False else [
-            {"label": "Manage", "links": [{"name": "Overview", "href": "#"},
-             {"name": "Employees", "href": "#"}, {"name": "Cards", "href": "#"},
-             {"name": "Users", "href": "#"}, {"name": "Settings", "href": "#"}]},
-            {"label": "Records", "links": [{"name": "Attendance", "href": "#"},
-             {"name": "Reports", "href": "#"}]}],
-        active="Overview", role_label="Admin", user_name="Admin", user_initials="AD")
+    nav = [{"label": "Manage", "links": [
+               {"name": "Overview", "href": "#"}, {"name": "Employees", "href": "#"},
+               {"name": "Cards", "href": "#"}, {"name": "Users", "href": "#"},
+               {"name": "Settings", "href": "#"}]},
+           {"label": "Records", "links": [
+               {"name": "Attendance", "href": "#"}, {"name": "Reports", "href": "#"}]}]
+    return render_template("style_guide.html", nav=nav, active="Overview",
+                           role_label="Admin", user_name="Admin", user_initials="AD")
 
 
 # ---- Friendly error pages ----------------------------------------------------

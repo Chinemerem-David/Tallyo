@@ -1,15 +1,14 @@
-"""Sign-in, sign-out and role protection.
-
-TEMPORARY: DEMO_USERS stands in for the database. In the database step we
-replace it with a real `users` table and nothing else in this file changes.
-"""
+"""Sign-in, sign-out and role protection. Accounts live in the `users` table."""
 import hmac
 import secrets
+from datetime import datetime
 from functools import wraps
 
 from flask import (Blueprint, abort, redirect, render_template, request,
                    session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
+
+from db import get_db
 
 bp = Blueprint("auth", __name__)
 
@@ -30,15 +29,6 @@ ROLE_LABELS = {"admin": "Admin", "hr": "HR manager", "employee": "Employee"}
 # Where each role lands after signing in (these are endpoint names in app.py).
 ROLE_HOME = {"admin": "admin_home", "hr": "hr_home", "employee": "portal_home"}
 
-# Passwords are stored as hashes, never as plain text, even in the demo.
-DEMO_USERS = {
-    "admin":    {"role": "admin",    "name": "Admin",
-                 "hash": generate_password_hash("admin123")},
-    "chiamaka": {"role": "hr",       "name": "Chiamaka Eze",
-                 "hash": generate_password_hash("hr123")},
-    "emp-0142": {"role": "employee", "name": "Amara Okafor",
-                 "hash": generate_password_hash("emp123")},
-}
 # Checked when the username doesn't exist, so a wrong username takes as long
 # as a wrong password and an attacker can't tell the two apart by timing.
 _DUMMY_HASH = generate_password_hash("not-a-real-password")
@@ -107,8 +97,10 @@ def login():
     username = request.form.get("username", "").strip()[:64]
     password = request.form.get("password", "")[:256]
 
-    record = DEMO_USERS.get(username.lower())
-    password_ok = check_password_hash(record["hash"] if record else _DUMMY_HASH, password)
+    db = get_db()
+    record = db.execute("SELECT * FROM users WHERE username = ? AND is_active = 1",
+                        (username,)).fetchone()          # username column ignores case
+    password_ok = check_password_hash(record["password_hash"] if record else _DUMMY_HASH, password)
 
     # One vague message for every failure: wrong name, wrong password, or the
     # right person on the wrong tab. We never reveal which part was wrong.
@@ -117,8 +109,11 @@ def login():
                              username, 401)
 
     session.clear()                       # new session on sign-in
-    session["user"] = {"username": username.lower(), "name": record["name"],
-                       "role": record["role"]}
+    db.execute("UPDATE users SET last_login_at = ? WHERE id = ?",
+               (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), record["id"]))
+    session["user"] = {"id": record["id"], "username": record["username"],
+                       "name": record["full_name"], "role": record["role"],
+                       "employee_id": record["employee_id"]}
     session.permanent = bool(request.form.get("remember"))
     return redirect(url_for(ROLE_HOME[record["role"]]))
 

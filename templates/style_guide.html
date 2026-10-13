@@ -1,61 +1,57 @@
 {% extends "app_shell.html" %}
-{% block title %}Style guide . {{ APP_NAME }}{% endblock %}
+{% block title %}Style guide · {{ APP_NAME }}{% endblock %}
 
 {% block sidebar_footer %}
-    <span class="dot"></span> Reader connected
+  <span class="dot"></span> Reader connected
 {% endblock %}
 
 {% block content %}
-    <h1 class="page-title">Style guide</h1>
-    <p class="muted mt-1">Every building block of {{ APP_NAME }}, in one place.</p>
+  <h1 class="page-title">Style guide</h1>
+  <p class="muted mt-1">Every building block of {{ APP_NAME }}, in one place.</p>
 
-    <h2 class="section-title mt-6">Tiles</h2>
-    <div class="grid-cards mt-3">
-        <div class="card tile"><div class="tile-label">Present</div><div class="tile-value">41</div></div>
-        <div class="card tile"><div class="tile-label">Late</div><div class="tile-value">4</div></div>
-        <div class="card tile"><div class="tile-label">Not in yet</div><div class="tile-value">3</div></div>
-        <div class="card tile"><div class="tile-label">Cards unassigned</div><div class="tile-value">2</div></div>
+  <h2 class="section-title mt-6">Tiles</h2>
+  <div class="grid-cards mt-3">
+    <div class="card tile"><div class="tile-label">Present</div><div class="tile-value">41</div></div>
+    <div class="card tile"><div class="tile-label">Late</div><div class="tile-value">4</div></div>
+    <div class="card tile"><div class="tile-label">Not in yet</div><div class="tile-value">3</div></div>
+    <div class="card tile"><div class="tile-label">Cards unassigned</div><div class="tile-value">2</div></div>
+  </div>
+
+  <h2 class="section-title mt-6">Buttons and pills</h2>
+  <div class="row wrap gap-3 mt-3">
+    <button class="btn" type="button">+ Add employee</button>
+    <button class="btn btn-secondary" type="button">Export CSV</button>
+    <button class="btn" type="button" disabled>Link card</button>
+    <span class="pill pill-ok">On time</span>
+    <span class="pill pill-late">Late</span>
+    <span class="pill pill-bad">Absent</span>
+    <span class="pill">HR manager</span>
+  </div>
+
+  <div class="grid-two mt-6">
+    <div class="card card-pad">
+      <h2 class="section-title">Form fields</h2>
+      <label class="field mt-4">
+        <span class="field-label">Username</span>
+        <input class="input" type="text" placeholder="admin">
+      </label>
+      <label class="field">
+        <span class="field-label">Duplicate tap window</span>
+        <input class="input" type="text" value="60 seconds">
+        <span class="hint">Ignores repeat taps of the same card.</span>
+      </label>
+      <button class="btn" type="button">Save changes</button>
     </div>
 
-    <h2 class="section-title mt-6">Buttons and pills</h2>
-    <div class="row wrap gap-3 mt-3">
-        <button class="btn" type="button">+ Add employee</button>
-        <button class="btn btn-secondary" type="button">Export CSV</button>
-        <button class="btn" type="button" disabled>Link card</button>
-        <span class="pill pill-ok">On time</span>
-        <span class="pill pill-late">Late</span>
-        <span class="pill pill-bad">Absent</span>
-        <span class="pill">HR manager</span>
+    <div class="card table-card">
+      <table class="table">
+        <thead><tr><th>Employee</th><th>Time</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><span class="avatar">AO</span> Amara Okafor</td><td class="muted">08:42</td><td><span class="pill pill-ok">On time</span></td></tr>
+          <tr><td><span class="avatar">GA</span> Grace Adeyemi</td><td class="muted">09:14</td><td><span class="pill pill-late">Late</span></td></tr>
+          <tr><td><span class="avatar">KA</span> Kofi Asante</td><td class="muted">–</td><td><span class="pill pill-bad">Absent</span></td></tr>
+        </tbody>
+      </table>
     </div>
-
-    <div class="grid-two mt-6">
-        <div class="card card-pad">
-            <h2 class="section-title">Form fields</h2>
-            <label class="field mt-4">
-                <span class="field-label">Username</span>
-                <input class="input" type="text" placeholder="admin">
-            </label>
-
-            <label class="field">
-                <span class="field-label">Duplicate tap window</span>
-                <input class="input" type="text" value="60 seconds">
-                <span class="hint">Ignores repeat taps of the same card.</span>
-            </label>
-                
-            <button class="btn" type="button">Save changes</button>
-        </div>
-
-        <div class="card table-card">
-            <table class="table">
-                <thead><tr><th>Employee</th><th>Time</th><th>Status</th></tr></thead>
-
-                <tbody>
-                    <tr><td><span class="avatar">AO</span> Amara Okafor</td><td class="muted">08:42</td><td><span class="pill pill-ok">On time</span></td></tr>
-                    <tr><td><span class="avatar">GA</span> Grace Adeyemi</td><td class="muted">09:14</td><td><span class="pill pill-late">Late</span></td></tr>
-                    <tr><td><span class="avatar">KA</span> Kofi Asante</td><td class="muted">-</td><td><span class="pill pill-bad">Absent</span></td></tr>
-        
-                </tbody>
-            </table>
-        </div>
-    </div>
+  </div>
 {% endblock %}
