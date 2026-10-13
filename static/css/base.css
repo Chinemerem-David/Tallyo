@@ -40,6 +40,7 @@ html[data-theme="light"] {
   --surface: #FFFFFF;       /* cards, inputs                  */
   --text: #17221A;
   --muted: #7C7258;
+  --subtle: #5C6558;        /* secondary text on forms */
   --line: #E3DEC9;          /* borders and dividers           */
   --soft: #EDE9D8;          /* chips, toggle track, avatars   */
 
@@ -70,6 +71,7 @@ html[data-theme="dark"] {
   --surface: #181D15;
   --text: #ECEFE4;
   --muted: #98A18C;
+  --subtle: #98A18C;
   --line: #262D21;
   --soft: #232A1E;
 
@@ -344,6 +346,25 @@ a { color: var(--link); }
 .theme-toggle button[aria-pressed="true"] {
   background: var(--primary);
   color: var(--on-primary);
+}
+
+
+/* Alert box (form errors) */
+.alert { margin-bottom: var(--space-4); padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.9375rem; }
+.alert-error { background: var(--bad-bg); color: var(--bad-fg); }
+
+/* A button that looks like a text link (used for Sign out) */
+.link-button { padding: 0; border: 0; background: none; text-decoration: underline; cursor: pointer; }
+.inline-form { display: inline; }
+
+/* Full-page centred message (error pages) */
+.center-page { display: grid; place-items: center; min-height: 100vh; padding: var(--space-5); }
+.center-card { width: 100%; max-width: 28rem; }
+
+/* Hidden on screen, still read by screen readers */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
 

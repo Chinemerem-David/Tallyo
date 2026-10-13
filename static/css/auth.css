@@ -1,0 +1,170 @@
+/* ==========================================================================
+   Tallyo: auth.css  (sign-in page only)
+   1. Layout   2. Form   3. Role tabs   4. Animated panel   5. Small screens
+   ========================================================================== */
+
+
+/* 1. LAYOUT: form on the left, green panel on the right ------------------- */
+
+.auth {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.auth-main {
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem clamp(1.5rem, 8vw, 7.5rem) 3rem;
+}
+
+.auth-brand {
+  align-self: flex-start;
+  margin-bottom: 3rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* margin-block:auto centres the form in the space under the logo. */
+.auth-form { width: 100%; max-width: 26rem; margin-block: auto; }
+
+.auth-toggle { position: absolute; top: 1.5rem; right: 2rem; z-index: 2; }
+
+
+/* 2. FORM ------------------------------------------------------------------ */
+
+.auth-title {
+  margin-bottom: 0.5rem;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(2rem, 4.5vw, 2.75rem);
+  line-height: 1.1;
+}
+.auth-sub { margin-bottom: 1.5rem; color: var(--subtle); font-size: 1.0625rem; }
+
+.auth-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0.25rem 0 1.5rem;
+  font-size: 0.9375rem;
+}
+.check { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.check input { width: 1rem; height: 1rem; accent-color: var(--primary); }
+.auth-link { color: var(--link); }
+
+.auth-note { margin-top: var(--space-4); font-size: 0.875rem; line-height: 1.4; color: var(--muted); }
+
+
+/* 3. ROLE TABS: radio buttons that look like a segmented control ----------- */
+
+.role-tabs {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  margin: 0 0 1.5rem;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--soft);
+}
+/* Hidden visually but still focusable, so the keyboard arrow keys work. */
+.role-tabs input { position: absolute; opacity: 0; pointer-events: none; }
+.role-tabs label {
+  flex: 1;
+  padding: 0.625rem 0.5rem;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.role-tabs input:checked + label {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+}
+.role-tabs input:focus-visible + label { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+
+/* 4. ANIMATED PANEL -------------------------------------------------------- */
+
+.auth-panel {
+  --panel-bg: #1B3A1F;
+  --panel-back: #15301A;
+  --panel-line: #E9F3D0;
+  --panel-accent: #B8E62E;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--panel-bg);
+  color: var(--panel-line);
+}
+
+.auth-caption {
+  position: absolute;
+  left: 3.75rem; right: 3.75rem; bottom: 3.75rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.5rem;
+  line-height: 1.35;
+}
+
+.wallet { width: min(62%, 20rem); height: auto; }
+.wallet rect, .wallet line, .wallet path { stroke-width: 3; }
+
+.wallet-back  { fill: var(--panel-back); stroke: var(--panel-line); }
+.wallet-front { fill: var(--panel-bg);   stroke: var(--panel-line); } /* opaque: hides the card */
+.wallet-card rect, .wallet-card line { stroke: var(--panel-accent); }
+.wallet-stitch { stroke: var(--panel-accent); stroke-width: 2; stroke-dasharray: 3 9; }
+.wallet-clasp { fill: var(--panel-accent); stroke: none; }
+.arc { stroke: var(--panel-accent); opacity: 0; }
+
+/* The card rises out of the wallet, tilts, holds while the arcs pulse, then drops back. */
+.wallet-card {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: card-out 3.6s ease-in-out infinite;
+}
+@keyframes card-out {
+  0%        { transform: translateY(145px) rotate(0); }
+  30%, 65%  { transform: translateY(0) rotate(-10deg); }
+  92%, 100% { transform: translateY(145px) rotate(0); }
+}
+
+.arc-1 { animation: arc-pulse 3.6s ease-in-out infinite; }
+.arc-2 { animation: arc-pulse 3.6s ease-in-out 0.12s infinite; }
+.arc-3 { animation: arc-pulse 3.6s ease-in-out 0.24s infinite; }
+@keyframes arc-pulse {
+  0%, 32%   { opacity: 0; }
+  38%       { opacity: 1; }
+  46%       { opacity: 0.25; }
+  54%       { opacity: 1; }
+  62%       { opacity: 0.25; }
+  66%, 100% { opacity: 0; }
+}
+
+/* People who ask their device for less motion get a still picture. */
+@media (prefers-reduced-motion: reduce) {
+  .wallet-card { animation: none; transform: translateY(0) rotate(-10deg); }
+  .arc { animation: none; opacity: 0.6; }
+}
+
+
+/* 5. SMALL SCREENS: the panel becomes a banner above the form -------------- */
+
+@media (max-width: 900px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-panel { order: -1; min-height: 15rem; }
+  .wallet { width: 9rem; }
+  .auth-caption { display: none; }
+  .auth-main { padding: 2rem 1.5rem 2.5rem; }
+  .auth-brand { margin-bottom: 1.5rem; }
+  .auth-toggle { top: 1rem; right: 1rem; }
+}
