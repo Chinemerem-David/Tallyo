@@ -1,0 +1,10 @@
+{# Logo + tally-mark icon + wordmark. Colours come from css, so it works in both themes. #}
+<span class="brand">
+    <svg class="brand-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" aria-hidden="true">
+        <path d="M14 10V54M24 10V54M34 10V54M44 10V54"/>
+        <path class="brand-slash" d="M7 45L53 17"/>
+    </svg>
+    <span class="brand-name">{{ APP_NAME[:-1] }}
+        <span>{{ APP_NAME[-1]|upper }}</span>
+    </span>
+</span>
