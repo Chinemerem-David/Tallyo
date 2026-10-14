@@ -1,4 +1,5 @@
 """Read-only questions the dashboards ask the database."""
+import re
 
 
 def overview_stats(db, today):
@@ -60,7 +61,7 @@ def attention_items(db, today):
                               (result, today)).fetchone()
             items.append({"title": one if n == 1 else many % n,
                           "detail": detail % (last["card_uid"], last["tapped_at"][11:16]),
-                          "action": action, "href": "#"})
+                          "action": action, "endpoint": "admin.cards", "params": {}})
 
     names = [r[0] for r in db.execute("""
         SELECT full_name FROM employees e WHERE is_active = 1 AND NOT EXISTS
@@ -69,7 +70,8 @@ def attention_items(db, today):
     if names:
         items.append({"title": "1 employee has no card" if len(names) == 1
                                else "%d employees have no card" % len(names),
-                      "detail": _names(names) + ".", "action": "Assign cards", "href": "#"})
+                      "detail": _names(names) + ".", "action": "Assign cards",
+                      "endpoint": "admin.employees", "params": {"status": "no_card"}})
     return items
 
 
@@ -145,3 +147,50 @@ def list_employees(db, q="", dept="", status="", page=1, per_page=PER_PAGE):
 
 def get_employee(db, employee_id):
     return db.execute("SELECT * FROM employees WHERE id = ?", (employee_id,)).fetchone()
+
+
+# ---- Cards list --------------------------------------------------------------
+
+CARD_STATUSES = ("active", "available", "lost", "deactivated")
+
+
+def card_counts(db):
+    rows = {r["status"]: r["n"] for r in db.execute("SELECT status, COUNT(*) AS n FROM cards GROUP BY status")}
+    counts = {s: rows.get(s, 0) for s in CARD_STATUSES}
+    counts["all"] = sum(counts.values())
+    return counts
+
+
+def get_card(db, card_id):
+    return db.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
+
+
+def list_cards(db, q="", status="", page=1, per_page=PER_PAGE):
+    """Search matches the card ID (spaces and colons ignored), the owner's name or ID."""
+    where, params = [], []
+    if status in CARD_STATUSES:
+        where.append("c.status = ?"); params.append(status)
+    if q:
+        like = "%" + _like(q) + "%"
+        parts, extra = ["e.full_name LIKE ? ESCAPE '\\'", "e.employee_code LIKE ? ESCAPE '\\'"], [like, like]
+        compact = re.sub(r"[\s:\-]", "", q).upper()
+        if compact:
+            parts.append("REPLACE(c.uid, ' ', '') LIKE ? ESCAPE '\\'")
+            extra.append("%" + _like(compact) + "%")
+        where.append("(" + " OR ".join(parts) + ")"); params += extra
+    clause = " AND ".join(where) or "1 = 1"
+    base = "FROM cards c LEFT JOIN employees e ON e.id = c.employee_id WHERE " + clause
+
+    total = db.execute("SELECT COUNT(*) " + base, params).fetchone()[0]
+    pages = max((total + per_page - 1) // per_page, 1)
+    page = min(max(page, 1), pages)
+    rows = db.execute("""
+        SELECT c.*, e.full_name AS owner, e.employee_code AS owner_code, e.id AS owner_id,
+               (SELECT MAX(t.tapped_at) FROM tap_log t
+                 WHERE t.card_uid = c.uid AND t.result IN ('check_in', 'check_out')) AS last_tap
+        """ + base + """
+        ORDER BY (e.full_name IS NULL), e.full_name COLLATE NOCASE, c.id
+        LIMIT ? OFFSET ?""", params + [per_page, (page - 1) * per_page]).fetchall()
+    return {"rows": [dict(r) for r in rows], "total": total, "page": page, "pages": pages,
+            "first": (page - 1) * per_page + 1 if total else 0, "last": min(page * per_page, total),
+            "numbers": page_numbers(page, pages)}

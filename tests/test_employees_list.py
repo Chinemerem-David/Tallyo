@@ -85,7 +85,8 @@ class ListPage(unittest.TestCase):
     def test_menu_link_is_live_and_unbuilt_pages_stay_dead(self):
         html = self.login("admin", "admin", "admin123").get("/admin").get_data(as_text=True)
         self.assertIn('href="/admin/employees"', html)
-        self.assertRegex(html, r'href="#"[^>]*>Cards')
+        self.assertIn('href="/admin/cards"', html)
+        self.assertRegex(html, r'href="#"[^>]*>Users')
 
 
 if __name__ == "__main__":

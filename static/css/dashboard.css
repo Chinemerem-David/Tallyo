@@ -101,3 +101,13 @@
 }
 .uid { font-size: 1.75rem; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 .history-row { padding-left: 0; padding-right: 0; }
+
+
+/* ---- Cards page --------------------------------------------------------- */
+
+.register { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-5); }
+.register-form { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.register-form .input { width: 14rem; max-width: 100%; }
+.recent-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }
+.chip-button { border: 0; font: inherit; font-size: 0.8125rem; cursor: pointer; }
+.chip-button:hover { background: var(--line); }

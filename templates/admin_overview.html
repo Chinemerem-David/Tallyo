@@ -36,7 +36,7 @@
         <div class="attention-item">
           <div class="attention-title">{{ item.title }}</div>
           <div class="attention-detail">{{ item.detail }}</div>
-          <a class="attention-action" href="{{ item.href }}">{{ item.action }}</a>
+          <a class="attention-action" href="{{ safe_url(item.endpoint, **item.params) }}">{{ item.action }}</a>
         </div>
       {% else %}
         <p class="empty-inline">All clear. Nothing needs your attention.</p>

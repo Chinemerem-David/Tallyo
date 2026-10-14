@@ -1,0 +1,94 @@
+{% extends "app_shell.html" %}
+{% block title %}Cards · {{ APP_NAME }}{% endblock %}
+{% block sidebar_footer %}<span class="dot"></span> Reader connected{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">Cards</h1>
+  <p class="muted mt-1">RFID cards and who they belong to</p>
+
+  <section class="card card-pad mt-5">
+    <div class="register">
+      <div>
+        <h2 class="section-title">Register a new card</h2>
+        <p class="muted small mt-1">Tap a new card on the reader and it appears below. Or type its ID.</p>
+      </div>
+      <form class="register-form" method="post" action="{{ url_for('admin.card_register') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input class="input" type="text" name="uid" placeholder="A3 4F 91 0C" autocomplete="off"
+               spellcheck="false" aria-label="Card ID" required>
+        <button class="btn" type="submit">Register card</button>
+      </form>
+    </div>
+    {% if recent %}
+      <div class="recent-list">
+        <span class="muted small">Recently tapped, not registered:</span>
+        {% for r in recent %}
+          <form class="inline-form" method="post" action="{{ url_for('admin.card_register') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="uid" value="{{ r.card_uid }}">
+            <button class="chip chip-button" type="submit" title="Register this card">+ {{ r.card_uid }} · {{ r.last_tap | when(today) }}</button>
+          </form>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+  <form class="toolbar mt-5" method="get" action="{{ url_for('admin.cards') }}">
+    <input class="input toolbar-search" type="search" name="q" value="{{ q }}"
+           placeholder="Search card ID or employee" aria-label="Search cards">
+    {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q %}<a class="muted" href="{{ url_for('admin.cards', status=status or None) }}">Clear</a>{% endif %}
+  </form>
+
+  <div class="chips">
+    <a class="chip" href="{{ url_for('admin.cards', q=q or None) }}" {% if not status %}aria-current="true"{% endif %}>All {{ counts.all }}</a>
+    {% for key, label in (('active', 'Active'), ('available', 'Available'), ('lost', 'Lost'), ('deactivated', 'Deactivated')) %}
+      <a class="chip" href="{{ url_for('admin.cards', q=q or None, status=key) }}" {% if status == key %}aria-current="true"{% endif %}>{{ label }} {{ counts[key] }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="card table-card mt-4">
+    <table class="table">
+      <thead><tr><th>Card ID</th><th>Assigned to</th><th>Assigned on</th><th>Last tap</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for c in result.rows %}
+          <tr>
+            <td>{{ c.uid }}</td>
+            <td>{% if c.owner %}{{ c.owner }} <span class="muted small">{{ c.owner_code }}</span>{% else %}<span class="muted">Unassigned</span>{% endif %}</td>
+            <td class="muted">{{ c.assigned_on or '–' }}</td>
+            <td class="muted">{{ c.last_tap | when(today) if c.last_tap else '–' }}</td>
+            <td>
+              {% if c.status == 'active' %}<span class="pill pill-ok">Active</span>
+              {% elif c.status == 'lost' %}<span class="pill pill-bad">Lost</span>
+              {% else %}<span class="pill">{{ c.status | capitalize }}</span>{% endif %}
+            </td>
+            <td class="right">
+              {% if c.status == 'available' %}<a href="{{ url_for('admin.card_assign', card_id=c.id) }}">Assign</a>
+              {% elif c.owner_id %}<a href="{{ url_for('admin.employee_card', employee_id=c.owner_id) }}">Manage</a>{% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty-cell">No cards match your search.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if result.total %}
+      <div class="pager">
+        <span class="muted">Showing {{ result.first }}–{{ result.last }} of {{ result.total }}</span>
+        {% if result.pages > 1 %}
+          <nav aria-label="Pages">
+            {% if result.page > 1 %}<a href="{{ url_for('admin.cards', page=result.page - 1, **keep) }}">‹ Previous</a>{% endif %}
+            {% for n in result.numbers %}
+              {% if n is none %}<span class="page muted">…</span>
+              {% elif n == result.page %}<a href="#" aria-current="page">{{ n }}</a>
+              {% else %}<a href="{{ url_for('admin.cards', page=n, **keep) }}">{{ n }}</a>{% endif %}
+            {% endfor %}
+            {% if result.page < result.pages %}<a href="{{ url_for('admin.cards', page=result.page + 1, **keep) }}">Next ›</a>{% endif %}
+          </nav>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

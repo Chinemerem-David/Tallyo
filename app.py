@@ -13,7 +13,7 @@ import admin
 import auth
 import db
 import queries
-from shell import safe_url, shell_context
+from shell import friendly_when, safe_url, shell_context
 
 app = Flask(__name__)
 app.config.update(
@@ -26,6 +26,7 @@ app.config.update(
 )
 app.register_blueprint(auth.bp)
 app.register_blueprint(admin.bp)
+app.add_template_filter(friendly_when, "when")
 db.init_app(app)
 
 # The product name lives in ONE place.

@@ -1,4 +1,6 @@
 """Menus and the shared page frame (sidebar + top bar) for signed-in pages."""
+from datetime import date, datetime
+
 from flask import session, url_for
 from werkzeug.routing import BuildError
 
@@ -42,3 +44,14 @@ def shell_context(active=None):
     return {"nav": nav, "active": active or DEFAULT_ACTIVE[role],
             "role_label": auth.ROLE_LABELS[role],
             "user_name": user["name"], "user_initials": initials(user["name"])}
+
+
+def friendly_when(stamp, today=None):
+    """'2026-10-13 08:42:10' -> 'Today 08:42', or '12 Oct 08:42' for earlier days."""
+    if not stamp:
+        return "Never"
+    today = today or date.today().isoformat()
+    if stamp[:10] == today:
+        return "Today " + stamp[11:16]
+    day = datetime.strptime(stamp[:10], "%Y-%m-%d")
+    return "%d %s %s" % (day.day, day.strftime("%b"), stamp[11:16])

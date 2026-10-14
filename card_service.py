@@ -92,3 +92,60 @@ def retire_card(db, employee_id, status):
             raise CardError("This employee has no active card.")
         db.execute("UPDATE cards SET status = ? WHERE id = ?", (status, card["id"]))
     return card["uid"]
+
+
+def register_card(db, raw_uid):
+    """Add a card to the system as a spare, ready to be assigned later."""
+    try:
+        uid = normalize_uid(raw_uid)
+    except ValueError:
+        raise CardError("That doesn't look like a card ID. Use 8, 14 or 20 letters and "
+                        "numbers, like A3 4F 91 0C.")
+    with transaction(db):
+        row = db.execute("SELECT c.status, e.full_name FROM cards c "
+                         "LEFT JOIN employees e ON e.id = c.employee_id WHERE c.uid = ?",
+                         (uid,)).fetchone()
+        if row:
+            if row["status"] == "available":
+                raise CardError("That card is already registered as a spare.")
+            if row["status"] == "active":
+                raise CardError("That card is already assigned to %s." % row["full_name"])
+            raise CardError("That card is already registered and marked %s." % row["status"])
+        db.execute("INSERT INTO cards (uid, status) VALUES (?, 'available')", (uid,))
+    return uid
+
+
+def remove_spare(db, card_id):
+    """Delete a spare card (for example one registered by mistake)."""
+    with transaction(db):
+        card = db.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
+        if card is None:
+            raise CardError("That card no longer exists.")
+        if card["status"] != "available":
+            raise CardError("Only spare cards can be removed. Assigned cards are "
+                            "marked lost or deactivated instead.")
+        db.execute("DELETE FROM cards WHERE id = ?", (card_id,))
+    return card["uid"]
+
+
+def register_card(db, raw_uid):
+    """Add a card to the system as 'available' (not yet given to anyone)."""
+    try:
+        uid = normalize_uid(raw_uid)
+    except ValueError:
+        raise CardError("That doesn't look like a card ID. Use 8, 14 or 20 letters and "
+                        "numbers, like A3 4F 91 0C.")
+    with transaction(db):
+        existing = db.execute("SELECT status FROM cards WHERE uid = ?", (uid,)).fetchone()
+        if existing:
+            raise CardError("That card is already registered (%s)." % existing["status"])
+        db.execute("INSERT INTO cards (uid, status) VALUES (?, 'available')", (uid,))
+    return uid
+
+
+def employees_needing_card(db):
+    return db.execute("""
+        SELECT id, employee_code, full_name, department FROM employees e
+        WHERE is_active = 1 AND NOT EXISTS
+              (SELECT 1 FROM cards c WHERE c.employee_id = e.id AND c.status = 'active')
+        ORDER BY full_name COLLATE NOCASE""").fetchall()

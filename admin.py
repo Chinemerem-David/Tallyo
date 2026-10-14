@@ -138,3 +138,64 @@ def employee_card_retire(employee_id):
     else:
         flash("Card %s marked as %s. It can no longer be used." % (uid, status), "success")
     return redirect(url_for("admin.employee_card", employee_id=employee_id))
+
+
+# ---- Cards (full list, register, assign a spare) ------------------------------
+
+@bp.route("/cards")
+@admin_only
+def cards():
+    q = request.args.get("q", "").strip()[:60]
+    status = request.args.get("status", "")
+    if status not in queries.CARD_STATUSES:
+        status = ""
+    conn = db.get_db()
+    return render_template(
+        "admin_cards.html", result=queries.list_cards(conn, q, status, request.args.get("page", 1, type=int)),
+        counts=queries.card_counts(conn), recent=card_service.recent_unregistered(conn),
+        q=q, status=status, keep={"q": q or None, "status": status or None},
+        today=date.today().isoformat(), **shell_context("Cards"))
+
+
+@bp.route("/cards/register", methods=["POST"])
+@admin_only
+def card_register():
+    auth.verify_csrf()
+    try:
+        uid = card_service.register_card(db.get_db(), request.form.get("uid", ""))
+    except card_service.CardError as err:
+        flash(str(err), "error")
+    else:
+        flash("Card %s registered. It is ready to assign." % uid, "success")
+    return redirect(url_for("admin.cards"))
+
+
+@bp.route("/cards/<int:card_id>/assign", methods=["GET", "POST"])
+@admin_only
+def card_assign(card_id):
+    conn = db.get_db()
+    card = queries.get_card(conn, card_id)
+    if card is None:
+        abort(404)
+    if card["status"] != "available":
+        flash("Only spare cards can be assigned here. Open the employee's page to replace a card.", "error")
+        return redirect(url_for("admin.cards"))
+    people = card_service.employees_needing_card(conn)
+
+    def page(error=None, chosen="", status=200):
+        return render_template("admin_card_assign.html", card=card, people=people, error=error,
+                               chosen=chosen, **shell_context("Cards")), status
+
+    if request.method == "POST":
+        auth.verify_csrf()
+        chosen = request.form.get("employee_id", "")
+        try:
+            if not chosen.isdigit():
+                raise card_service.CardError("Choose an employee.")
+            uid = card_service.assign_card(conn, int(chosen), card["uid"])
+        except card_service.CardError as err:
+            return page(str(err), chosen, 422)
+        name = next((p["full_name"] for p in people if str(p["id"]) == chosen), "the employee")
+        flash("Card %s assigned to %s." % (uid, name), "success")
+        return redirect(url_for("admin.cards"))
+    return page()

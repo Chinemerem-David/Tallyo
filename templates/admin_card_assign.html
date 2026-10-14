@@ -1,0 +1,32 @@
+{% extends "app_shell.html" %}
+{% block title %}Assign card · {{ APP_NAME }}{% endblock %}
+{% block sidebar_footer %}<span class="dot"></span> Reader connected{% endblock %}
+
+{% block content %}
+  <a class="back muted" href="{{ url_for('admin.cards') }}">‹ Cards</a>
+  <h1 class="page-title mt-3">Assign card</h1>
+  <p class="uid mt-1">{{ card.uid }}</p>
+
+  <form class="card card-pad form-card mt-5" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+    {% if people %}
+      <label class="field">
+        <span class="field-label">Give this card to</span>
+        <select class="input" name="employee_id">
+          <option value="">Choose an employee…</option>
+          {% for p in people %}
+            <option value="{{ p.id }}" {% if chosen == p.id|string %}selected{% endif %}>{{ p.full_name }} · {{ p.employee_code }} · {{ p.department }}</option>
+          {% endfor %}
+        </select>
+        <span class="hint">Only active employees without a card are listed.</span>
+      </label>
+      <div class="form-actions">
+        <button class="btn" type="submit">Assign card</button>
+        <a class="muted" href="{{ url_for('admin.cards') }}">Cancel</a>
+      </div>
+    {% else %}
+      <p class="muted">Every active employee already has a card.</p>
+    {% endif %}
+  </form>
+{% endblock %}
