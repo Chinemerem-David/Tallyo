@@ -89,3 +89,15 @@
 .check-line input { width: 1rem; height: 1rem; accent-color: var(--primary); }
 .form-actions { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-5); }
 .alert-success { background: var(--ok-bg); color: var(--ok-fg); }
+
+
+/* ---- Employee card page (Part 3) ---------------------------------------- */
+
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.uid { font-size: 1.75rem; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.history-row { padding-left: 0; padding-right: 0; }

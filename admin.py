@@ -4,6 +4,7 @@ from datetime import date
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 import auth
+import card_service
 import db
 import employee_service
 import queries
@@ -83,3 +84,57 @@ def employee_edit(employee_id):
                          "department": row["department"], "email": row["email"] or "",
                          "joined_on": row["joined_on"], "is_active": bool(row["is_active"])},
                  {}, employee_id)
+
+
+# ---- Cards for one employee (Part 3) -----------------------------------------
+
+def _card_page(employee, error=None, picked="", manual="", status=200):
+    conn = db.get_db()
+    return render_template(
+        "admin_employee_card.html", employee=employee, error=error, picked=picked, manual=manual,
+        current=card_service.current_card(conn, employee["id"]),
+        history=card_service.past_cards(conn, employee["id"]),
+        spares=card_service.available_cards(conn),
+        recent=card_service.recent_unregistered(conn),
+        today=date.today().isoformat(), **shell_context("Employees")), status
+
+
+@bp.route("/employees/<int:employee_id>/card", methods=["GET", "POST"])
+@admin_only
+def employee_card(employee_id):
+    conn = db.get_db()
+    employee = queries.get_employee(conn, employee_id)
+    if employee is None:
+        abort(404)
+    if request.method == "POST":
+        auth.verify_csrf()
+        picked = request.form.get("uid_pick", "")
+        manual = request.form.get("uid_manual", "").strip()
+        try:
+            if not (manual or picked):
+                raise card_service.CardError("Pick a card or type a card ID.")
+            uid = card_service.assign_card(conn, employee_id, manual or picked,
+                                           request.form.get("replace_old_as") or None)
+        except card_service.CardError as err:
+            return _card_page(employee, str(err), picked, manual, 422)
+        flash("Card %s assigned to %s." % (uid, employee["full_name"]), "success")
+        return redirect(url_for("admin.employees"))
+    return _card_page(employee)
+
+
+@bp.route("/employees/<int:employee_id>/card/retire", methods=["POST"])
+@admin_only
+def employee_card_retire(employee_id):
+    conn = db.get_db()
+    employee = queries.get_employee(conn, employee_id)
+    if employee is None:
+        abort(404)
+    auth.verify_csrf()
+    status = request.form.get("status", "")
+    try:
+        uid = card_service.retire_card(conn, employee_id, status)
+    except card_service.CardError as err:
+        flash(str(err), "error")
+    else:
+        flash("Card %s marked as %s. It can no longer be used." % (uid, status), "success")
+    return redirect(url_for("admin.employee_card", employee_id=employee_id))

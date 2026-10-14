@@ -1,0 +1,92 @@
+{% extends "app_shell.html" %}
+{% block title %}Card for {{ employee.full_name }} · {{ APP_NAME }}{% endblock %}
+{% block sidebar_footer %}<span class="dot"></span> Reader connected{% endblock %}
+
+{% block content %}
+  <a class="back muted" href="{{ url_for('admin.employees') }}">‹ Employees</a>
+  <h1 class="page-title mt-3">Card for {{ employee.full_name }}</h1>
+  <p class="muted mt-1">{{ employee.employee_code }} · {{ employee.department }}
+    {% if not employee.is_active %}· <strong>Inactive</strong>{% endif %}</p>
+
+  <div class="two-col mt-5">
+    <section class="card card-pad">
+      <h2 class="section-title">Current card</h2>
+      {% if current %}
+        <p class="uid mt-3">{{ current.uid }}</p>
+        <p class="muted small">Active since {{ current.assigned_on }}</p>
+        <div class="row wrap gap-3 mt-4">
+          {% for value, label in (('lost', 'Mark as lost'), ('deactivated', 'Deactivate')) %}
+            <form class="inline-form" method="post" action="{{ url_for('admin.employee_card_retire', employee_id=employee.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="status" value="{{ value }}">
+              <button class="btn btn-secondary" type="submit">{{ label }}</button>
+            </form>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted mt-3">No active card. {{ 'Assign one on the right.' if employee.is_active else '' }}</p>
+      {% endif %}
+
+      {% if history %}
+        <h3 class="section-title mt-6">Earlier cards</h3>
+        {% for c in history %}
+          <div class="list-row history-row">
+            <span class="grow">{{ c.uid }}</span>
+            <span class="pill {{ 'pill-bad' if c.status == 'lost' else '' }}">{{ c.status|capitalize }}</span>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </section>
+
+    <form class="card card-pad" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="section-title">{{ 'Replace card' if current else 'Assign a card' }}</h2>
+      {% if error %}<div class="alert alert-error mt-3" role="alert">{{ error }}</div>{% endif %}
+
+      <label class="field mt-4">
+        <span class="field-label">Pick a card</span>
+        <select class="input" name="uid_pick">
+          <option value="">Choose…</option>
+          {% if recent %}
+            <optgroup label="Recently tapped, not registered yet">
+              {% for r in recent %}
+                <option value="{{ r.card_uid }}" {% if picked == r.card_uid %}selected{% endif %}>
+                  {{ r.card_uid }} · {{ r.last_tap[11:16] }}{% if r.last_tap[:10] != today %} on {{ r.last_tap[:10] }}{% endif %}
+                </option>
+              {% endfor %}
+            </optgroup>
+          {% endif %}
+          {% if spares %}
+            <optgroup label="Spare cards">
+              {% for c in spares %}
+                <option value="{{ c.uid }}" {% if picked == c.uid %}selected{% endif %}>{{ c.uid }}</option>
+              {% endfor %}
+            </optgroup>
+          {% endif %}
+        </select>
+        <span class="hint">A new card appears under "Recently tapped" after someone taps it on the reader.</span>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Or type a card ID</span>
+        <input class="input" type="text" name="uid_manual" value="{{ manual }}" placeholder="A3 4F 91 0C"
+               autocomplete="off" spellcheck="false">
+      </label>
+
+      {% if current %}
+        <label class="field">
+          <span class="field-label">What happens to the current card?</span>
+          <select class="input" name="replace_old_as">
+            <option value="lost">It was lost</option>
+            <option value="deactivated">Deactivate it (replaced)</option>
+          </select>
+          <span class="hint">The old card stops working immediately.</span>
+        </label>
+      {% endif %}
+
+      <button class="btn" type="submit" {% if not employee.is_active %}disabled{% endif %}>
+        {{ 'Replace card' if current else 'Assign card' }}
+      </button>
+    </form>
+  </div>
+{% endblock %}
