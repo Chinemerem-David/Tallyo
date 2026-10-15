@@ -1,6 +1,5 @@
 {% extends "app_shell.html" %}
 {% block title %}Card for {{ employee.full_name }} · {{ APP_NAME }}{% endblock %}
-{% block sidebar_footer %}<span class="dot"></span> Reader connected{% endblock %}
 
 {% block content %}
   <a class="back muted" href="{{ url_for('admin.employees') }}">‹ Employees</a>

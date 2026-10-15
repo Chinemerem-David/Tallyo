@@ -1,0 +1,58 @@
+{% extends "app_shell.html" %}
+{% block title %}Settings · {{ APP_NAME }}{% endblock %}
+
+{% macro rule(name, label, hint, values, errors, type='time', extra='') %}
+  <label class="field">
+    <span class="field-label">{{ label }}</span>
+    <input class="input" type="{{ type }}" name="{{ name }}" value="{{ values[name] }}" {{ extra|safe }}
+           {% if name in errors %}aria-invalid="true" aria-describedby="err-{{ name }}"{% endif %}>
+    <span class="hint">{{ hint }}</span>
+    {% if name in errors %}<span class="field-error" id="err-{{ name }}">{{ errors[name] }}</span>{% endif %}
+  </label>
+{% endmacro %}
+
+{% block content %}
+  <h1 class="page-title">Settings</h1>
+  <p class="muted mt-1">Work rules, reader and database</p>
+
+  <div class="two-col mt-5">
+    <form class="card card-pad" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="section-title">Work rules</h2>
+      <div class="mt-4">
+        {{ rule('work_start', 'Work starts', 'The official start of the working day.', values, errors) }}
+        {{ rule('late_after', 'Late after', 'Check-ins after this time are marked late.', values, errors) }}
+        {{ rule('work_end', 'Work ends', 'Check-outs before this time are flagged as leaving early.', values, errors) }}
+        {{ rule('duplicate_window_seconds', 'Duplicate tap window (seconds)', 'A second tap of the same card inside this window is ignored.', values, errors, type='number', extra='min="5" max="600" step="1" inputmode="numeric"') }}
+      </div>
+      <button class="btn" type="submit">Save changes</button>
+    </form>
+
+    <div class="stack-cards">
+      <section class="card card-pad">
+        <div class="row between">
+          <h2 class="section-title">Reader</h2>
+          {% if reader_state.connected %}<span class="pill pill-ok">Connected</span>{% else %}<span class="pill pill-late">Not connected</span>{% endif %}
+        </div>
+        <div class="kv mt-3"><span class="muted">Port</span><span>{{ reader_state.port or '–' }}</span></div>
+        <div class="kv"><span class="muted">Last card tap</span><span>{{ last_tap | when(today) }}</span></div>
+        <p class="muted small mt-3">The RFID reader connects in the Arduino step. Until then, taps come from the simulator.</p>
+        <button class="btn btn-secondary mt-3" type="button" disabled>Test reader</button>
+      </section>
+
+      <section class="card card-pad">
+        <h2 class="section-title">Database</h2>
+        <div class="kv mt-3"><span class="muted">Last backup</span><span>{{ backup.latest.taken_at | when(today) if backup.latest else 'Never' }}</span></div>
+        <div class="kv"><span class="muted">Backups kept</span><span>{{ backup.count }}</span></div>
+        <div class="kv"><span class="muted">Attendance records</span><span>{{ '{:,}'.format(records) }}</span></div>
+        <div class="row wrap gap-3 mt-4">
+          <form class="inline-form" method="post" action="{{ url_for('admin.settings_backup') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn" type="submit">Back up now</button>
+          </form>
+          {% if backup.latest %}<a class="btn btn-secondary" href="{{ url_for('admin.settings_backup_download') }}">Download latest</a>{% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

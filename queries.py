@@ -44,8 +44,9 @@ def _names(names):
     return "%s and %d more" % (", ".join(names[:3]), len(names) - 3)
 
 
-def attention_items(db, today):
-    """Things only an admin needs to act on. Empty list = all clear."""
+def attention_items(db, today, backup=None):
+    """Things only an admin needs to act on. Empty list = all clear.
+    backup: pass backup_service.status(...) to include the backup reminder."""
     items = []
 
     for result, one, many, detail, action in (
@@ -62,6 +63,13 @@ def attention_items(db, today):
             items.append({"title": one if n == 1 else many % n,
                           "detail": detail % (last["card_uid"], last["tapped_at"][11:16]),
                           "action": action, "endpoint": "admin.cards", "params": {}})
+
+    if backup is not None and (backup["age_days"] is None or backup["age_days"] >= 7):
+        never = backup["age_days"] is None
+        items.append({"title": "No backup yet" if never else "Backup is %d days old" % backup["age_days"],
+                      "detail": "Back up the database so records can be restored if something goes wrong."
+                                if never else "Last backup: %s." % backup["latest"]["taken_at"][:10],
+                      "action": "Back up now", "endpoint": "admin.settings", "params": {}})
 
     names = [r[0] for r in db.execute("""
         SELECT full_name FROM employees e WHERE is_active = 1 AND NOT EXISTS
@@ -194,3 +202,14 @@ def list_cards(db, q="", status="", page=1, per_page=PER_PAGE):
     return {"rows": [dict(r) for r in rows], "total": total, "page": page, "pages": pages,
             "first": (page - 1) * per_page + 1 if total else 0, "last": min(page * per_page, total),
             "numbers": page_numbers(page, pages)}
+
+
+# ---- Settings page helpers ---------------------------------------------------
+
+def last_tap(db):
+    row = db.execute("SELECT MAX(tapped_at) FROM tap_log WHERE result IN ('check_in','check_out')").fetchone()
+    return row[0]
+
+
+def attendance_count(db):
+    return db.execute("SELECT COUNT(*) FROM attendance").fetchone()[0]

@@ -22,7 +22,9 @@
       {% endfor %}
     </nav>
 
-    <div class="sidebar-footer">{% block sidebar_footer %}{% endblock %}</div>
+    <div class="sidebar-footer">
+      {% block sidebar_footer %}<span class="dot{{ '' if reader.connected else ' dot-off' }}"></span> {{ reader.label }}{% endblock %}
+    </div>
   </aside>
 
   <div class="main">

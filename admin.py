@@ -1,13 +1,17 @@
 """Admin pages. Built one at a time: Employees first, then Cards, Users, ..."""
 from datetime import date
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import (Blueprint, abort, current_app, flash, redirect, render_template, request,
+                   send_file, url_for)
 
 import auth
+import backup_service
 import card_service
 import db
 import employee_service
 import queries
+import reader
+import settings_service
 from shell import shell_context
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -199,3 +203,49 @@ def card_assign(card_id):
         flash("Card %s assigned to %s." % (uid, name), "success")
         return redirect(url_for("admin.cards"))
     return page()
+
+
+# ---- Settings: work rules, reader, backups --------------------------------------
+
+def _settings_page(values, errors=None, status=200):
+    conn = db.get_db()
+    path = current_app.config["DATABASE"]
+    return render_template(
+        "admin_settings.html", values=values, errors=errors or {},
+        reader_state=reader.status(), last_tap=queries.last_tap(conn),
+        records=queries.attendance_count(conn), backup=backup_service.status(path),
+        today=date.today().isoformat(), **shell_context("Settings")), status
+
+
+@bp.route("/settings", methods=["GET", "POST"])
+@admin_only
+def settings():
+    conn = db.get_db()
+    if request.method == "POST":
+        auth.verify_csrf()
+        try:
+            clean = settings_service.validate(request.form)
+        except settings_service.SettingsError as err:
+            return _settings_page(err.values, err.errors, 422)
+        settings_service.save_settings(conn, clean)
+        flash("Work rules saved. They apply to the next card tap.", "success")
+        return redirect(url_for("admin.settings"))
+    return _settings_page(settings_service.get_settings(conn))
+
+
+@bp.route("/settings/backup", methods=["POST"])
+@admin_only
+def settings_backup():
+    auth.verify_csrf()
+    dest = backup_service.create_backup(db.get_db(), current_app.config["DATABASE"])
+    flash("Backup created: %s." % dest.name, "success")
+    return redirect(url_for("admin.settings"))
+
+
+@bp.route("/settings/backup/download")
+@admin_only
+def settings_backup_download():
+    latest = backup_service.status(current_app.config["DATABASE"])["latest"]
+    if latest is None:
+        abort(404)
+    return send_file(latest["path"], as_attachment=True, download_name=latest["name"])

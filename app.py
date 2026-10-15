@@ -11,8 +11,10 @@ except ImportError:
 
 import admin
 import auth
+import backup_service
 import db
 import queries
+import reader
 from shell import friendly_when, safe_url, shell_context
 
 app = Flask(__name__)
@@ -38,7 +40,8 @@ APP_TAGLINE = "RFID attendance for teams"
 def inject_globals():
     """Available in every template."""
     return {"APP_NAME": APP_NAME, "APP_TAGLINE": APP_TAGLINE,
-            "csrf_token": auth.csrf_token, "safe_url": safe_url}
+            "csrf_token": auth.csrf_token, "safe_url": safe_url,
+            "reader": reader.status()}
 
 
 @app.after_request
@@ -80,11 +83,13 @@ def admin_home():
     now = datetime.now()
     today = now.strftime("%Y-%m-%d")
     conn = db.get_db()
+    attention = queries.attention_items(
+        conn, today, backup=backup_service.status(app.config["DATABASE"]))
     return render_template(
         "admin_overview.html",
         stats=queries.overview_stats(conn, today),
         taps=queries.latest_taps(conn, today),
-        attention=queries.attention_items(conn, today),
+        attention=attention,
         greeting=greeting(now),
         first_name=session["user"]["name"].split()[0],
         date_label="%s %d %s" % (now.strftime("%A"), now.day, now.strftime("%B")),

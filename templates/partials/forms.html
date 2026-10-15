@@ -1,0 +1,15 @@
+{# Shared form pieces. Use:  {% from "partials/forms.html" import text_field %} #}
+
+{# One input with its label, hint and error message.
+   attrs is for developer-written extras such as 'min="5" max="600"'. #}
+{% macro text_field(name, label, values, errors, type='text', hint='', readonly=false, list='', attrs='', placeholder='') %}
+  <label class="field">
+    <span class="field-label">{{ label }}</span>
+    <input class="input" type="{{ type }}" name="{{ name }}" value="{{ values.get(name, '') }}"
+           {% if readonly %}readonly{% endif %} {% if list %}list="{{ list }}"{% endif %}
+           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %} {{ attrs|safe }}
+           {% if name in errors %}aria-invalid="true" aria-describedby="err-{{ name }}"{% endif %}>
+    {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+    {% if name in errors %}<span class="field-error" id="err-{{ name }}">{{ errors[name] }}</span>{% endif %}
+  </label>
+{% endmacro %}

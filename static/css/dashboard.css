@@ -111,3 +111,21 @@
 .recent-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }
 .chip-button { border: 0; font: inherit; font-size: 0.8125rem; cursor: pointer; }
 .chip-button:hover { background: var(--line); }
+
+
+/* ---- Settings page ------------------------------------------------------ */
+
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: var(--space-4); align-items: start; }
+.stack > * + * { margin-top: var(--space-4); }
+.kv { display: flex; justify-content: space-between; gap: var(--space-3); padding: 0.625rem 0; border-top: 1px solid var(--line); font-size: 0.9375rem; }
+.dot-off { background: var(--sidebar-muted); }
+
+
+/* ---- Settings page -------------------------------------------------------- */
+
+.stack-cards { display: grid; gap: var(--space-4); }
+.kv {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: 0.625rem 0; border-top: 1px solid var(--line); font-size: 0.9375rem;
+}
+.dot-off { background: var(--muted); }
