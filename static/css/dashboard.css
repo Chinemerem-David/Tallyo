@@ -129,3 +129,12 @@
   padding: 0.625rem 0; border-top: 1px solid var(--line); font-size: 0.9375rem;
 }
 .dot-off { background: var(--muted); }
+
+
+/* ---- Users and account pages ---------------------------------------------- */
+
+.table-title { padding: 0.25rem 0.75rem 0.75rem; }
+.table-foot { padding: 0.875rem 0.75rem 0.25rem; font-size: 0.875rem; border-top: 1px solid var(--line); }
+.row-action { margin-left: var(--space-3); }
+.yes { color: var(--ok-fg); font-weight: 700; }
+.static-value { padding: 0.75rem 0; color: var(--text); }

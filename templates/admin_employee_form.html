@@ -37,4 +37,17 @@
       <a class="muted" href="{{ url_for('admin.employees') }}">Cancel</a>
     </div>
   </form>
+
+  {% if not creating %}
+    <section class="card card-pad form-card mt-4">
+      <h2 class="section-title">Sign-in</h2>
+      <p class="muted small mt-1">If {{ values.full_name }} forgets their password, give them a new temporary one.
+        They must choose their own when they next sign in.</p>
+      <form method="post" action="{{ url_for('admin.employee_reset_password', employee_id=employee_id) }}"
+            onsubmit="return confirm('Reset the password for {{ values.full_name|e }}? Their current password will stop working.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-secondary mt-3" type="submit">Reset password</button>
+      </form>
+    </section>
+  {% endif %}
 {% endblock %}

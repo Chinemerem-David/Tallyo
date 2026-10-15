@@ -51,6 +51,7 @@
             <button class="btn" type="submit">Back up now</button>
           </form>
           {% if backup.latest %}<a class="btn btn-secondary" href="{{ url_for('admin.settings_backup_download') }}">Download latest</a>{% endif %}
+          <a class="btn btn-secondary" href="{{ url_for('admin.settings_export') }}">Export all data</a>
         </div>
       </section>
     </div>

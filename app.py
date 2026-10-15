@@ -9,6 +9,7 @@ try:                                  # .env support is optional
 except ImportError:
     pass
 
+import account
 import admin
 import auth
 import backup_service
@@ -27,6 +28,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),   # for "Keep me signed in"
 )
 app.register_blueprint(auth.bp)
+app.register_blueprint(account.bp)
 app.register_blueprint(admin.bp)
 app.add_template_filter(friendly_when, "when")
 db.init_app(app)

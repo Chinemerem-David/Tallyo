@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT    NOT NULL,
     employee_id   INTEGER UNIQUE REFERENCES employees(id),
     is_active     INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+    must_change_password INTEGER NOT NULL DEFAULT 0 CHECK (must_change_password IN (0, 1)),
     last_login_at TEXT,
     -- an employee account must point at an employee; the others must not
     CHECK ((role = 'employee') = (employee_id IS NOT NULL))
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS tap_log (
                  'duplicate', 'unregistered', 'inactive_card'))
 );
 CREATE INDEX IF NOT EXISTS idx_tap_log_time ON tap_log (tapped_at);
+CREATE INDEX IF NOT EXISTS idx_tap_log_card ON tap_log (card_uid);
 
 CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,

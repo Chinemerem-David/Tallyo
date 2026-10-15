@@ -33,6 +33,7 @@
       <span class="pill">{{ role_label }}</span>
       <span class="avatar avatar-accent">{{ user_initials }}</span>
       <span>{{ user_name }}</span>
+      <a class="muted" href="{{ safe_url('account.password') }}">Password</a>
       <form class="inline-form" method="post" action="{{ url_for('auth.logout') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="link-button muted" type="submit">Sign out</button>

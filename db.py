@@ -36,8 +36,16 @@ def transaction(conn):
         conn.execute("COMMIT")
 
 
+def _migrate(conn):
+    """Bring a database made by an older version up to date (adds new columns)."""
+    columns = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+    if "must_change_password" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0")
+
+
 def init_schema(conn):
     conn.executescript(SCHEMA_FILE.read_text())
+    _migrate(conn)
 
 
 def ensure_schema(path):

@@ -1,17 +1,20 @@
 """Admin pages. Built one at a time: Employees first, then Cards, Users, ..."""
+import io
 from datetime import date
 
 from flask import (Blueprint, abort, current_app, flash, redirect, render_template, request,
-                   send_file, url_for)
+                   send_file, session, url_for)
 
 import auth
 import backup_service
 import card_service
 import db
 import employee_service
+import export_service
 import queries
 import reader
 import settings_service
+import user_service
 from shell import shell_context
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -249,3 +252,109 @@ def settings_backup_download():
     if latest is None:
         abort(404)
     return send_file(latest["path"], as_attachment=True, download_name=latest["name"])
+
+
+@bp.route("/settings/export")
+@admin_only
+def settings_export():
+    """Everything as a ZIP of CSV files (employees, cards, attendance, taps, settings).
+    Passwords are never included."""
+    data = export_service.export_zip(db.get_db())
+    return send_file(io.BytesIO(data), mimetype="application/zip", as_attachment=True,
+                     download_name="tallyo-export-%s.zip" % date.today().strftime("%Y%m%d"))
+
+
+# ---- Users: admin and HR accounts ---------------------------------------------
+
+def _temp_password_message(prefix, username, password):
+    return ("%s Username: %s. Temporary password: %s. It is shown only once, and they must "
+            "choose a new password when they next sign in." % (prefix, username, password))
+
+
+@bp.route("/users")
+@admin_only
+def users():
+    conn = db.get_db()
+    return render_template(
+        "admin_users.html", staff=queries.staff_accounts(conn),
+        employee_accounts=queries.employee_account_count(conn),
+        me_id=session["user"]["id"], today=date.today().isoformat(), **shell_context("Users"))
+
+
+def _user_form(creating, values, errors, user=None, error=None, status=200):
+    return render_template("admin_user_form.html", creating=creating, values=values, errors=errors,
+                           user=user, error=error, roles=user_service.STAFF_ROLES,
+                           **shell_context("Users")), status
+
+
+@bp.route("/users/new", methods=["GET", "POST"])
+@admin_only
+def user_new():
+    conn = db.get_db()
+    if request.method == "POST":
+        auth.verify_csrf()
+        try:
+            clean = user_service.validate_new(conn, request.form)
+            _, password = user_service.create_user(conn, clean)
+        except employee_service.ValidationError as err:
+            return _user_form(True, err.values, err.errors, status=422)
+        flash(_temp_password_message("%s added as %s." % (clean["full_name"], user_service.STAFF_ROLES[clean["role"]]),
+                                     clean["username"], password), "success")
+        return redirect(url_for("admin.users"))
+    return _user_form(True, {"full_name": "", "username": "", "role": "hr"}, {})
+
+
+@bp.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
+@admin_only
+def user_edit(user_id):
+    conn = db.get_db()
+    user = queries.get_user(conn, user_id)
+    if user is None or user["role"] == "employee":
+        abort(404)
+    values = {"full_name": user["full_name"], "username": user["username"], "role": user["role"],
+              "is_active": bool(user["is_active"])}
+    if request.method == "POST":
+        auth.verify_csrf()
+        values["full_name"] = request.form.get("full_name", "")
+        values["is_active"] = request.form.get("is_active") == "on"
+        try:
+            user_service.update_user(conn, user_id, values["full_name"], values["is_active"],
+                                     session["user"]["id"])
+        except employee_service.ValidationError as err:
+            return _user_form(False, values, err.errors, user, status=422)
+        except user_service.UserError as err:
+            return _user_form(False, values, {}, user, error=str(err), status=422)
+        flash("Changes to %s saved." % " ".join(values["full_name"].split()), "success")
+        return redirect(url_for("admin.users"))
+    return _user_form(False, values, {}, user)
+
+
+@bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
+@admin_only
+def user_reset_password(user_id):
+    auth.verify_csrf()
+    try:
+        user, password = user_service.reset_password(db.get_db(), user_id)
+    except user_service.UserError as err:
+        flash(str(err), "error")
+    else:
+        flash(_temp_password_message("Password reset for %s." % user["full_name"], user["username"], password),
+              "success")
+    return redirect(url_for("admin.users"))
+
+
+@bp.route("/employees/<int:employee_id>/reset-password", methods=["POST"])
+@admin_only
+def employee_reset_password(employee_id):
+    conn = db.get_db()
+    if queries.get_employee(conn, employee_id) is None:
+        abort(404)
+    auth.verify_csrf()
+    try:
+        user, password = user_service.reset_employee_password(conn, employee_id)
+    except user_service.UserError as err:
+        flash(str(err), "error")
+    else:
+        flash(_temp_password_message("Password reset for %s." % user["full_name"], user["username"], password),
+              "success")
+    return redirect(url_for("admin.employee_edit", employee_id=employee_id))

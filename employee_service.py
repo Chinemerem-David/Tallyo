@@ -88,8 +88,8 @@ def create_employee(db, clean):
                 " VALUES (?,?,?,?,?)",
                 (clean["employee_code"], clean["full_name"], clean["department"],
                  clean["email"], clean["joined_on"]))
-            db.execute("INSERT INTO users (username, full_name, role, password_hash, employee_id)"
-                       " VALUES (?,?,?,?,?)",
+            db.execute("INSERT INTO users (username, full_name, role, password_hash, employee_id,"
+                       " must_change_password) VALUES (?,?,?,?,?,1)",
                        (clean["employee_code"], clean["full_name"], "employee",
                         generate_password_hash(password), cur.lastrowid))
     except sqlite3.IntegrityError:                  # someone else took the ID a moment ago

@@ -130,6 +130,28 @@ class Pages(unittest.TestCase):
         self.assertTrue(d.data.startswith(b"SQLite format 3"))
         d.close()
 
+    def test_export_is_a_zip_of_csv_files_without_passwords(self):
+        import csv, io, zipfile
+        c = self.login()
+        r = c.get("/admin/settings/export")
+        self.assertEqual((r.status_code, r.mimetype), (200, "application/zip"))
+        self.assertIn("tallyo-export-", r.headers["Content-Disposition"])
+        z = zipfile.ZipFile(io.BytesIO(r.data))
+        self.assertEqual(sorted(z.namelist()), ["attendance.csv", "cards.csv", "employees.csv", "settings.csv", "tap_log.csv"])
+        rows = list(csv.reader(io.StringIO(z.read("employees.csv").decode("utf-8-sig"))))
+        self.assertEqual(rows[0][:3], ["employee_code", "full_name", "department"])
+        self.assertEqual(len(rows) - 1, 48)
+        for name in z.namelist():
+            self.assertNotIn("password", z.read(name).decode("utf-8-sig").lower())
+        r.close()
+        self.assertEqual(self.login("hr", "chiamaka", "hr123").get("/admin/settings/export").status_code, 403)
+
+    def test_spreadsheet_formulas_are_defused(self):
+        from export_service import safe_cell
+        self.assertEqual(safe_cell("=HYPERLINK(\"x\")"), "'=HYPERLINK(\"x\")")
+        self.assertEqual((safe_cell("+1"), safe_cell("@a"), safe_cell("-2")), ("'+1", "'@a", "'-2"))
+        self.assertEqual((safe_cell("Amara"), safe_cell(5), safe_cell(None)), ("Amara", 5, None))
+
     def test_sidebar_tells_the_truth_and_access_rules_hold(self):
         c = self.login()
         self.assertIn("Reader not connected", c.get("/admin/employees").get_data(as_text=True))

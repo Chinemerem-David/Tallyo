@@ -21,7 +21,7 @@ ROLES = [
      "placeholder": "chiamaka", "sub": "Choose your role, then sign in.", "note": ""},
     {"key": "employee", "tab": "Employee", "label": "Employee ID",
      "placeholder": "EMP-0142", "sub": "Sign in to view your own attendance.",
-     "note": "Employee accounts are view-only. Ask HR if you cannot sign in."},
+     "note": "Employee accounts are view-only. Ask your administrator if you cannot sign in."},
 ]
 ROLE_BY_KEY = {r["key"]: r for r in ROLES}
 ROLE_LABELS = {"admin": "Admin", "hr": "HR manager", "employee": "Employee"}
@@ -59,10 +59,14 @@ def login_required(view):
         user = session.get("user")
         if not user:
             return redirect(url_for("auth.login"))
-        row = get_db().execute("SELECT is_active FROM users WHERE id = ?", (user["id"],)).fetchone()
+        row = get_db().execute("SELECT is_active, must_change_password FROM users WHERE id = ?",
+                               (user["id"],)).fetchone()
         if row is None or not row["is_active"]:       # deactivated since they signed in
             session.clear()
             return redirect(url_for("auth.login"))
+        # A temporary password must be replaced before anything else is allowed.
+        if row["must_change_password"] and request.endpoint not in ("account.password", "auth.logout"):
+            return redirect(url_for("account.password"))
         return view(*args, **kwargs)
     return wrapped
 

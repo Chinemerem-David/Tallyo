@@ -1,0 +1,68 @@
+{% extends "app_shell.html" %}
+{% block title %}Users · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Users and roles</h1>
+      <p class="muted mt-1">Only admins can create or change accounts.</p>
+    </div>
+    <a class="btn" href="{{ url_for('admin.user_new') }}">+ Add user</a>
+  </div>
+
+  <div class="card table-card mt-5">
+    <h2 class="section-title table-title">Accounts</h2>
+    <table class="table">
+      <thead><tr><th>Name</th><th>Role</th><th>Last sign in</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for u in staff %}
+          <tr>
+            <td>
+              <div class="row">
+                <span class="avatar">{{ u.initials }}</span>
+                <div>
+                  <div>{{ u.full_name }}{% if u.id == me_id %} <span class="muted small">(you)</span>{% endif %}</div>
+                  <div class="muted small">{{ u.username }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{% if u.role == 'admin' %}<span class="pill pill-ok">Admin</span>{% else %}<span class="pill">HR manager</span>{% endif %}</td>
+            <td class="muted">{{ u.last_login_at | when(today) if u.last_login_at else 'Never' }}</td>
+            <td>{% if u.is_active %}<span class="pill pill-ok">Active</span>{% else %}<span class="pill pill-bad">Inactive</span>{% endif %}</td>
+            <td class="right">
+              <a href="{{ url_for('admin.user_edit', user_id=u.id) }}">Edit</a>
+              {% if u.is_active %}
+                <form class="inline-form row-action" method="post"
+                      action="{{ url_for('admin.user_reset_password', user_id=u.id) }}"
+                      onsubmit="return confirm('Reset the password for {{ u.full_name|e }}? Their current password will stop working.')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="link-button" type="submit">Reset password</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="table-foot muted">{{ employee_accounts }} employee accounts, managed from <a href="{{ safe_url('admin.employees') }}">Employees</a>.</p>
+  </div>
+
+  <div class="card table-card mt-4">
+    <h2 class="section-title table-title">What each role can do</h2>
+    <table class="table">
+      <thead><tr><th></th><th>Admin</th><th>HR manager</th><th>Employee</th></tr></thead>
+      <tbody>
+        {% for label, admin, hr, emp in (
+            ('Manage employees and cards', 'Yes', 'No', 'No'),
+            ('Manage users and roles', 'Yes', 'No', 'No'),
+            ('Change work rules and back up', 'Yes', 'No', 'No'),
+            ('View attendance and reports', 'Yes', 'Yes', 'Own only')) %}
+          <tr>
+            <td>{{ label }}</td>
+            {% for v in (admin, hr, emp) %}<td class="{{ 'yes' if v == 'Yes' else 'muted' }}">{{ v }}</td>{% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

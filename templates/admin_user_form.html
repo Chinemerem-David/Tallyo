@@ -1,0 +1,48 @@
+{% extends "app_shell.html" %}
+{% from "partials/forms.html" import text_field %}
+{% block title %}{{ 'Add user' if creating else 'Edit user' }} · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <a class="back muted" href="{{ url_for('admin.users') }}">‹ Users</a>
+  <h1 class="page-title mt-3">{{ 'Add user' if creating else 'Edit user' }}</h1>
+  <p class="muted mt-1">
+    {% if creating %}They get a temporary password, shown once, and must choose their own when they first sign in.
+    {% else %}The username and role can't be changed. Create a new account for a different role.{% endif %}
+  </p>
+
+  <form class="card card-pad form-card mt-5" method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+    <div class="form-grid">
+      {{ text_field('full_name', 'Full name', values, errors) }}
+      {{ text_field('username', 'Username', values, errors, readonly=not creating,
+                    hint='Lowercase, used to sign in. Can\'t be changed later.' if creating else '',
+                    attrs='autocomplete="off" autocapitalize="none" spellcheck="false"') }}
+      {% if creating %}
+        <label class="field">
+          <span class="field-label">Role</span>
+          <select class="input" name="role" {% if 'role' in errors %}aria-invalid="true"{% endif %}>
+            {% for key, label in roles.items() %}
+              <option value="{{ key }}" {% if values.role == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% if 'role' in errors %}<span class="field-error">{{ errors.role }}</span>{% endif %}
+        </label>
+      {% else %}
+        <div class="field"><span class="field-label">Role</span><div class="static-value">{{ roles[values.role] }}</div></div>
+      {% endif %}
+    </div>
+
+    {% if not creating %}
+      <label class="check-line mt-3">
+        <input type="checkbox" name="is_active" {% if values.is_active %}checked{% endif %}> Active account
+      </label>
+      <p class="hint">Inactive accounts can't sign in. Anyone already signed in is signed out on their next click.</p>
+    {% endif %}
+
+    <div class="form-actions">
+      <button class="btn" type="submit">{{ 'Add user' if creating else 'Save changes' }}</button>
+      <a class="muted" href="{{ url_for('admin.users') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

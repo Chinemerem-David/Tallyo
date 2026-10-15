@@ -213,3 +213,26 @@ def last_tap(db):
 
 def attendance_count(db):
     return db.execute("SELECT COUNT(*) FROM attendance").fetchone()[0]
+
+
+# ---- Users -------------------------------------------------------------------
+
+def staff_accounts(db):
+    """Admin and HR accounts (employee accounts are managed from Employees)."""
+    people = []
+    for r in db.execute("""SELECT id, username, full_name, role, is_active, last_login_at
+                           FROM users WHERE role IN ('admin', 'hr')
+                           ORDER BY (role <> 'admin'), full_name COLLATE NOCASE"""):
+        p = dict(r)
+        parts = p["full_name"].split()
+        p["initials"] = (parts[0][0] + parts[1][0] if len(parts) > 1 else p["full_name"][:2]).upper()
+        people.append(p)
+    return people
+
+
+def employee_account_count(db):
+    return db.execute("SELECT COUNT(*) FROM users WHERE role = 'employee'").fetchone()[0]
+
+
+def get_user(db, user_id):
+    return db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()

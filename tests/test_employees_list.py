@@ -86,7 +86,8 @@ class ListPage(unittest.TestCase):
         html = self.login("admin", "admin", "admin123").get("/admin").get_data(as_text=True)
         self.assertIn('href="/admin/employees"', html)
         self.assertIn('href="/admin/cards"', html)
-        self.assertRegex(html, r'href="#"[^>]*>Users')
+        self.assertIn('href="/admin/users"', html)
+        self.assertRegex(html, r'href="#"[^>]*>Attendance')
 
 
 if __name__ == "__main__":
