@@ -1,0 +1,88 @@
+{% extends "app_shell.html" %}
+{% block title %}Reports · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div class="row wrap gap-4">
+      <h1 class="page-title">{{ month_label }}</h1>
+      <span class="row gap-2 no-print">
+        <a class="btn btn-secondary btn-icon" href="{{ url_for('admin.reports', month=prev.strftime('%Y-%m')) }}" aria-label="Previous month">‹</a>
+        {% if next_month %}
+          <a class="btn btn-secondary btn-icon" href="{{ url_for('admin.reports', month=next_month.strftime('%Y-%m')) }}" aria-label="Next month">›</a>
+        {% else %}
+          <span class="btn btn-secondary btn-icon is-disabled" aria-disabled="true" aria-label="No later month">›</span>
+        {% endif %}
+      </span>
+    </div>
+    <div class="row wrap gap-3 no-print">
+      <button class="btn btn-secondary" type="button" onclick="window.print()">Print / PDF</button>
+      <a class="btn" href="{{ url_for('admin.reports_export', month=first.strftime('%Y-%m')) }}">Export CSV</a>
+    </div>
+  </div>
+  <p class="muted mt-1">Monthly attendance report · working days that have finished</p>
+
+  {% if not report.totals %}
+    <div class="card card-pad mt-5"><p class="muted">There are no finished working days with records in {{ month_label }} yet.</p></div>
+  {% else %}
+    <div class="grid-cards mt-5">
+      <div class="card tile"><div class="tile-label">Attendance rate</div><div class="tile-value">{{ report.totals.rate }}%</div></div>
+      <div class="card tile"><div class="tile-label">Average arrival</div><div class="tile-value">{{ report.avg_arrival or '–' }}</div></div>
+      <div class="card tile"><div class="tile-label">Late arrivals</div><div class="tile-value">{{ report.totals.late }}</div></div>
+      <div class="card tile"><div class="tile-label">Absences</div><div class="tile-value">{{ report.totals.absent }}</div></div>
+    </div>
+
+    <div class="grid-main mt-4">
+      <section class="card card-pad">
+        <h2 class="section-title">Attendance rate by day</h2>
+        <p class="muted small mt-1">{{ report.days | length }} working days. Amber bars are below {{ low_rate }}%.</p>
+        <div class="chart-scroll">
+          <div class="chart" role="img" aria-label="Attendance rate for each working day of {{ month_label }}">
+            {% for d in report.days %}
+              <div class="bar-col" title="{{ d.date | day }}: {{ d.present }} of {{ d.total }} present ({{ d.rate }}%)">
+                <span class="bar-value">{{ d.rate }}%</span>
+                <span class="bar-track"><span class="bar {{ 'bar-low' if d.rate < low_rate else '' }}" style="height: {{ d.rate }}%"></span></span>
+                <span class="bar-label">{{ d.day_num }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="card table-card">
+        <h2 class="section-title table-title">Most late arrivals</h2>
+        {% if report.top_late %}
+          <table class="table">
+            <thead><tr><th>Employee</th><th>Dept</th><th>Times</th></tr></thead>
+            <tbody>
+              {% for p in report.top_late %}
+                <tr>
+                  <td><div class="row"><span class="avatar">{{ p.initials }}</span><span>{{ p.name }}</span></div></td>
+                  <td class="muted">{{ p.department }}</td>
+                  <td>{{ p.times }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="empty-inline pad-x">Nobody was late this month.</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <section class="card table-card mt-4">
+      <h2 class="section-title table-title">By department</h2>
+      <table class="table">
+        <thead><tr><th>Department</th><th>Attendance rate</th><th>Late arrivals</th></tr></thead>
+        <tbody>
+          {% for d in report.departments %}
+            <tr>
+              <td>{{ d.name }}</td>
+              <td><div class="row gap-3"><span class="meter"><span class="meter-fill {{ 'bar-low' if d.rate < low_rate else '' }}" style="width: {{ d.rate }}%"></span></span>{{ d.rate }}%</div></td>
+              <td>{{ d.late }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endif %}
+{% endblock %}

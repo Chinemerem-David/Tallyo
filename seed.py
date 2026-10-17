@@ -149,9 +149,10 @@ def seed(path=dbm.DEFAULT_DB, today=None, rng_seed=42):
                                          (co, p["uid"], p["id"], "check_out"))
                 day += timedelta(days=1)
 
-        if today.weekday() < 5:                              # one stranger's card today
-            conn.execute("INSERT INTO tap_log (tapped_at, card_uid, employee_id, result) VALUES (?,?,NULL,?)",
-                         ("%s 08:51:12" % today.isoformat(), UNREGISTERED_UID, "unregistered"))
+        # One stranger's card, on today if it is a working day, otherwise on the last Friday.
+        stranger_day = today - timedelta(days=max(today.weekday() - 4, 0))
+        conn.execute("INSERT INTO tap_log (tapped_at, card_uid, employee_id, result) VALUES (?,?,NULL,?)",
+                     ("%s 08:51:12" % stranger_day.isoformat(), UNREGISTERED_UID, "unregistered"))
 
     summary = {t: conn.execute("SELECT COUNT(*) FROM %s" % t).fetchone()[0]
                for t in ("employees", "cards", "users", "attendance", "tap_log")}

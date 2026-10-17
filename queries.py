@@ -1,5 +1,6 @@
 """Read-only questions the dashboards ask the database."""
 import re
+from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 
 
@@ -349,3 +350,88 @@ def get_attendance(db, record_id):
 def active_employees(db):
     return db.execute("SELECT id, employee_code, full_name, department FROM employees "
                       "WHERE is_active = 1 ORDER BY full_name COLLATE NOCASE").fetchall()
+
+
+# ---- Monthly report -------------------------------------------------------------
+
+_MONTH = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
+LOW_RATE = 92          # days below this attendance rate are drawn in amber
+
+
+def resolve_month(text, today):
+    """'2026-10' -> date(2026, 10, 1). Bad input, or a month in the future, means this month."""
+    this_month = today.replace(day=1)
+    m = _MONTH.match(text or "")
+    if not m:
+        return this_month
+    first = date(int(m.group(1)), int(m.group(2)), 1)
+    return min(max(first, date(2000, 1, 1)), this_month)
+
+
+def month_neighbours(first, today):
+    """(previous month, next month or None when that would be in the future)."""
+    prev = (first - timedelta(days=1)).replace(day=1)
+    nxt = (first + timedelta(days=32)).replace(day=1)
+    return prev, (nxt if nxt <= today.replace(day=1) else None)
+
+
+def _pct(part, whole):
+    return round(100 * part / whole) if whole else None
+
+
+def report_month(db, first, today):
+    """Working days only (Mon to Fri), and only days that have finished, so a
+    day that is still in progress never drags the numbers down."""
+    last = (first.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    end = min(last, today - timedelta(days=1))
+    empty = {"first": first, "end": end, "days": [], "totals": None, "avg_arrival": None,
+             "top_late": [], "departments": []}
+    if end < first:
+        return empty
+
+    rows = db.execute(_RECORDS + """
+        SELECT r.work_date, r.employee_id, r.status, r.check_in, e.full_name, e.department
+        FROM records r JOIN employees e ON e.id = r.employee_id
+        WHERE strftime('%w', r.work_date) NOT IN ('0', '6')""",
+        {"start": first.isoformat(), "end": end.isoformat(), "today": today.isoformat()}).fetchall()
+    if not rows:
+        return empty
+
+    by_day = defaultdict(lambda: {"present": 0, "late": 0, "total": 0})
+    by_dept = defaultdict(lambda: {"present": 0, "late": 0, "total": 0})
+    late_by_person, minutes = Counter(), []
+    names = {}
+    for r in rows:
+        present = r["status"] != "absent"
+        for bucket in (by_day[r["work_date"]], by_dept[r["department"]]):
+            bucket["total"] += 1
+            bucket["present"] += present
+            bucket["late"] += r["status"] == "late"
+        if r["status"] == "late":
+            late_by_person[r["employee_id"]] += 1
+            names[r["employee_id"]] = (r["full_name"], r["department"])
+        if r["check_in"]:
+            h, m, s = (int(x) for x in r["check_in"][11:19].split(":"))
+            minutes.append(h * 60 + m + s / 60)
+
+    days = []
+    for d in sorted(by_day):
+        c = by_day[d]
+        days.append({"date": d, "day_num": int(d[8:]), "present": c["present"], "late": c["late"],
+                     "absent": c["total"] - c["present"], "total": c["total"], "rate": _pct(c["present"], c["total"])})
+    present = sum(c["present"] for c in by_day.values())
+    total = sum(c["total"] for c in by_day.values())
+    avg = None
+    if minutes:
+        mean = round(sum(minutes) / len(minutes))
+        avg = "%02d:%02d" % divmod(mean, 60)
+    top = sorted(late_by_person.items(), key=lambda kv: (-kv[1], names[kv[0]][0].lower()))[:5]
+    return {
+        "first": first, "end": end, "days": days, "avg_arrival": avg,
+        "totals": {"present": present, "total": total, "rate": _pct(present, total),
+                   "late": sum(c["late"] for c in by_day.values()), "absent": total - present},
+        "top_late": [{"name": names[i][0], "department": names[i][1], "times": n,
+                      "initials": "".join(w[0] for w in names[i][0].split()[:2]).upper()} for i, n in top],
+        "departments": sorted(({"name": k, "rate": _pct(v["present"], v["total"]), "late": v["late"]}
+                               for k, v in by_dept.items()), key=lambda x: x["name"].lower()),
+    }

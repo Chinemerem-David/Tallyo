@@ -473,3 +473,33 @@ def attendance_delete(record_id):
     attendance_service.delete_record(conn, record_id)
     flash("Record for %s on %s deleted." % (record["full_name"], record["work_date"]), "success")
     return redirect(url_for("admin.attendance"))
+
+
+# ---- Reports: the monthly picture ------------------------------------------------
+
+@bp.route("/reports")
+@admin_only
+def reports():
+    today = date.today()
+    first = queries.resolve_month(request.args.get("month"), today)
+    prev, nxt = queries.month_neighbours(first, today)
+    return render_template(
+        "admin_reports.html", report=queries.report_month(db.get_db(), first, today), first=first,
+        month_label=first.strftime("%B %Y"), prev=prev, next_month=nxt, low_rate=queries.LOW_RATE,
+        **shell_context("Reports"))
+
+
+@bp.route("/reports/export")
+@admin_only
+def reports_export():
+    """One row per working day for the chosen month."""
+    today = date.today()
+    first = queries.resolve_month(request.args.get("month"), today)
+    report = queries.report_month(db.get_db(), first, today)
+    out = io.StringIO(newline="")
+    writer = csv.writer(out)
+    writer.writerow(["date", "expected", "present", "late", "absent", "attendance_rate_percent"])
+    for d in report["days"]:
+        writer.writerow([d["date"], d["total"], d["present"], d["late"], d["absent"], d["rate"]])
+    return Response("\ufeff" + out.getvalue(), mimetype="text/csv", headers={
+        "Content-Disposition": 'attachment; filename="tallyo-report-%s.csv"' % first.strftime("%Y-%m")})

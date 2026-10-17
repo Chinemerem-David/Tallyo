@@ -88,7 +88,10 @@ class ListPage(unittest.TestCase):
         self.assertIn('href="/admin/cards"', html)
         self.assertIn('href="/admin/users"', html)
         self.assertIn('href="/admin/attendance"', html)
-        self.assertRegex(html, r'href="#"[^>]*>Reports')
+        self.assertIn('href="/admin/reports"', html)
+        from shell import safe_url
+        with self.app.test_request_context():
+            self.assertEqual(safe_url("admin.page_that_does_not_exist"), "#")     # unbuilt pages stay harmless
 
 
 if __name__ == "__main__":

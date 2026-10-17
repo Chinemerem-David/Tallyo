@@ -149,3 +149,38 @@
 .toolbar-go { align-self: flex-end; }
 .warn { color: var(--late-fg); }
 .nowrap { white-space: nowrap; }
+
+
+/* ---- Reports ---------------------------------------------------------------- */
+
+/* Chart colours for each theme (green = healthy, amber = needs a look). */
+:root, html[data-theme="light"] { --chart-ok: #7DB82A; --chart-low: #E2A52B; }
+html[data-theme="dark"] { --chart-ok: #B8E62E; --chart-low: #E2A52B; }
+
+.btn-icon { padding: 0.4rem 0.9rem; font-size: 1.25rem; line-height: 1; }
+.is-disabled { opacity: 0.4; pointer-events: none; }
+.pad-x { padding: 0 1.375rem 1.25rem; }
+
+/* Bar chart made of plain HTML and CSS: no scripts, prints cleanly. */
+.chart-scroll { overflow-x: auto; margin-top: var(--space-4); }
+.chart { display: flex; align-items: stretch; gap: 0.375rem; height: 15rem; min-width: max-content; }
+.bar-col { display: flex; flex-direction: column; align-items: center; width: 1.9rem; }
+.bar-value { font-size: 0.6875rem; color: var(--muted); margin-bottom: 0.25rem; }
+.bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.bar { width: 100%; max-width: 1.5rem; background: var(--chart-ok); border-radius: 4px 4px 0 0; }
+.bar-low { background: var(--chart-low); }
+.bar-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.375rem; }
+
+.meter { width: 7rem; height: 0.5rem; border-radius: 4px; background: var(--soft); overflow: hidden; }
+.meter-fill { display: block; height: 100%; background: var(--chart-ok); }
+.meter-fill.bar-low { background: var(--chart-low); }
+
+/* "Print / PDF": hide the menus so only the report is printed. */
+@media print {
+  .sidebar, .topbar, .no-print { display: none !important; }
+  .shell { display: block; }
+  body { background: #fff; color: #000; }
+  .content { max-width: none; padding: 0; }
+  .card { break-inside: avoid; }
+  .bar, .meter-fill, .pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
