@@ -1,5 +1,6 @@
 """Read-only questions the dashboards ask the database."""
 import re
+from datetime import date, datetime, timedelta
 
 
 def overview_stats(db, today):
@@ -236,3 +237,115 @@ def employee_account_count(db):
 
 def get_user(db, user_id):
     return db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+
+# ---- Attendance log ------------------------------------------------------------
+
+ATTENDANCE_PER_PAGE = 12
+ATTENDANCE_MAX_DAYS = 92
+ATTENDANCE_STATUSES = ("on_time", "late", "absent")
+
+# Absences aren't stored. A working day (Mon to Fri, before today) with no record
+# for an active employee who had already joined counts as absent.
+_RECORDS = """
+WITH RECURSIVE days(d) AS (
+    SELECT :start UNION ALL SELECT date(d, '+1 day') FROM days WHERE d < :end
+),
+records AS (
+    SELECT a.id, a.work_date, a.employee_id, a.check_in, a.check_out, a.status, a.source, a.note
+    FROM attendance a WHERE a.work_date BETWEEN :start AND :end
+    UNION ALL
+    SELECT NULL, days.d, e.id, NULL, NULL, 'absent', NULL, NULL
+    FROM days JOIN employees e ON e.is_active = 1 AND e.joined_on <= days.d
+    WHERE strftime('%w', days.d) NOT IN ('0', '6') AND days.d < :today
+      AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.employee_id = e.id AND a.work_date = days.d)
+)
+"""
+
+
+def resolve_range(from_text, to_text, today):
+    """Turn the date boxes into a safe (start, end, was_trimmed). Bad or missing
+    values fall back to the last 30 days; the range is capped at 92 days."""
+    def parse(text):
+        try:
+            return date.fromisoformat(text)
+        except (TypeError, ValueError):
+            return None
+    end = min(parse(to_text) or today, today)
+    start = parse(from_text) or end - timedelta(days=29)
+    start = min(start, end)
+    trimmed = (end - start).days > ATTENDANCE_MAX_DAYS - 1
+    if trimmed:
+        start = end - timedelta(days=ATTENDANCE_MAX_DAYS - 1)
+    return start, end, trimmed
+
+
+def _attendance_where(q, dept, status):
+    where, params = ["1 = 1"], {}
+    if dept:
+        where.append("e.department = :dept"); params["dept"] = dept
+    if q:
+        where.append("(e.full_name LIKE :like ESCAPE '\\' OR e.employee_code LIKE :like ESCAPE '\\')")
+        params["like"] = "%" + _like(q) + "%"
+    base = " AND ".join(where)
+    if status in ATTENDANCE_STATUSES:
+        where.append("r.status = :status"); params["status"] = status
+    return base, " AND ".join(where), params
+
+
+def _hours_text(start, end):
+    minutes = int((datetime.strptime(end, "%Y-%m-%d %H:%M:%S") - datetime.strptime(start, "%Y-%m-%d %H:%M:%S")).total_seconds() // 60)
+    return "%dh %02dm" % divmod(minutes, 60)
+
+
+def _decorate(row, today):
+    p = dict(row)
+    parts = p["full_name"].split()
+    p["initials"] = (parts[0][0] + parts[-1][0]).upper()
+    p["in_time"] = p["check_in"][11:16] if p["check_in"] else "–"
+    if p["check_in"] and p["check_out"]:
+        p["out_time"], p["hours"] = p["check_out"][11:16], _hours_text(p["check_in"], p["check_out"])
+    elif p["check_in"]:
+        p["out_time"] = "Still in" if p["work_date"] == today else "Missing"
+        p["hours"] = "–"
+    else:
+        p["out_time"] = p["hours"] = "–"
+    return p
+
+
+def list_attendance(db, start, end, today, q="", dept="", status="", page=1,
+                    per_page=ATTENDANCE_PER_PAGE, paginate=True):
+    """Present and absent days together. Returns rows, total, per-status counts."""
+    base, where, params = _attendance_where(q, dept, status)
+    params.update(start=start.isoformat(), end=end.isoformat(), today=today.isoformat())
+    join = " FROM records r JOIN employees e ON e.id = r.employee_id WHERE "
+
+    counts = {s: 0 for s in ATTENDANCE_STATUSES}
+    for r in db.execute(_RECORDS + "SELECT r.status AS s, COUNT(*) AS n" + join + base + " GROUP BY r.status",
+                        {k: v for k, v in params.items() if k != "status"}):
+        counts[r["s"]] = r["n"]
+    counts["all"] = sum(counts.values())
+
+    total = db.execute(_RECORDS + "SELECT COUNT(*)" + join + where, params).fetchone()[0]
+    pages = max((total + per_page - 1) // per_page, 1) if paginate else 1
+    page = min(max(page, 1), pages)
+    sql = (_RECORDS + "SELECT r.*, e.full_name, e.employee_code, e.department" + join + where +
+           " ORDER BY r.work_date DESC, e.full_name COLLATE NOCASE")
+    if paginate:
+        sql += " LIMIT :limit OFFSET :offset"
+        params.update(limit=per_page, offset=(page - 1) * per_page)
+    rows = [_decorate(r, today.isoformat()) for r in db.execute(sql, params)]
+    return {"rows": rows, "total": total, "counts": counts, "page": page, "pages": pages,
+            "first": (page - 1) * per_page + 1 if total and paginate else (1 if total else 0),
+            "last": min(page * per_page, total) if paginate else total, "numbers": page_numbers(page, pages)}
+
+
+def get_attendance(db, record_id):
+    return db.execute("""SELECT a.*, e.full_name, e.employee_code, e.department
+                         FROM attendance a JOIN employees e ON e.id = a.employee_id
+                         WHERE a.id = ?""", (record_id,)).fetchone()
+
+
+def active_employees(db):
+    return db.execute("SELECT id, employee_code, full_name, department FROM employees "
+                      "WHERE is_active = 1 ORDER BY full_name COLLATE NOCASE").fetchall()

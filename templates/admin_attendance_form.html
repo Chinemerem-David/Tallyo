@@ -1,0 +1,53 @@
+{% extends "app_shell.html" %}
+{% from "partials/forms.html" import text_field %}
+{% block title %}{{ 'Add manual entry' if creating else 'Edit record' }} · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <a class="back muted" href="{{ url_for('admin.attendance') }}">‹ Attendance</a>
+  <h1 class="page-title mt-3">{{ 'Add manual entry' if creating else 'Edit record' }}</h1>
+  <p class="muted mt-1">
+    {% if creating %}For someone who forgot their card or couldn't tap. The reason is saved with the entry.
+    {% else %}{{ record.full_name }} · {{ record.work_date | day }}. The reason for the change is saved with the record.{% endif %}
+  </p>
+
+  <form class="card card-pad form-card mt-5" method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      {% if creating %}
+        <label class="field">
+          <span class="field-label">Employee</span>
+          <select class="input" name="employee_id" {% if 'employee_id' in errors %}aria-invalid="true"{% endif %}>
+            <option value="">Choose an employee…</option>
+            {% for p in employees %}
+              <option value="{{ p.id }}" {% if values.employee_id|string == p.id|string %}selected{% endif %}>{{ p.full_name }} · {{ p.employee_code }}</option>
+            {% endfor %}
+          </select>
+          {% if 'employee_id' in errors %}<span class="field-error">{{ errors.employee_id }}</span>{% endif %}
+        </label>
+        {{ text_field('work_date', 'Date', values, errors, type='date') }}
+      {% endif %}
+      {{ text_field('check_in', 'Check in', values, errors, type='time') }}
+      {{ text_field('check_out', 'Check out (optional)', values, errors, type='time') }}
+    </div>
+    {{ text_field('reason', 'Reason', values, errors, hint='Required. For example: forgot card, reader was down.',
+                  attrs='maxlength="200"') }}
+    <p class="hint">The status (on time or late) is worked out from the work rules in Settings.</p>
+
+    <div class="form-actions">
+      <button class="btn" type="submit">{{ 'Add entry' if creating else 'Save changes' }}</button>
+      <a class="muted" href="{{ url_for('admin.attendance') }}">Cancel</a>
+    </div>
+  </form>
+
+  {% if not creating %}
+    <section class="card card-pad form-card mt-4">
+      <h2 class="section-title">Delete this record</h2>
+      <p class="muted small mt-1">Use this only for a record entered by mistake. The person will show as absent for that day unless you add a new entry.</p>
+      <form method="post" action="{{ url_for('admin.attendance_delete', record_id=record.id) }}"
+            onsubmit="return confirm('Delete this attendance record? This cannot be undone.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-secondary mt-3" type="submit">Delete record</button>
+      </form>
+    </section>
+  {% endif %}
+{% endblock %}

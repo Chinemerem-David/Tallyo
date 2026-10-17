@@ -1,0 +1,92 @@
+{% extends "app_shell.html" %}
+{% block title %}Attendance · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Attendance</h1>
+      <p class="muted mt-1">{{ '{:,}'.format(result.counts.all) }} records{% if on_time_pct is not none %} · {{ on_time_pct }}% of arrivals on time{% endif %}
+        · {{ f.start.isoformat() | day }} to {{ f.end.isoformat() | day }}</p>
+    </div>
+    <div class="row wrap gap-3">
+      <a class="btn btn-secondary" href="{{ url_for('admin.attendance_export', **keep) }}">Export CSV</a>
+      <a class="btn" href="{{ url_for('admin.attendance_new') }}">+ Add manual entry</a>
+    </div>
+  </div>
+
+  {% if f.trimmed %}<div class="alert alert-error mt-4" role="status">Showing the latest 92 days only. Pick a shorter range to see older records.</div>{% endif %}
+
+  <form class="toolbar mt-5" method="get" action="{{ url_for('admin.attendance') }}">
+    <label class="toolbar-field"><span class="muted small">From</span>
+      <input class="input toolbar-date" type="date" name="from" value="{{ f.start.isoformat() }}"></label>
+    <label class="toolbar-field"><span class="muted small">To</span>
+      <input class="input toolbar-date" type="date" name="to" value="{{ f.end.isoformat() }}"></label>
+    <label class="toolbar-field"><span class="muted small">Department</span>
+      <select class="input toolbar-select" name="dept">
+        <option value="">All departments</option>
+        {% for d in departments %}<option value="{{ d }}" {% if d == f.dept %}selected{% endif %}>{{ d }}</option>{% endfor %}
+      </select></label>
+    <label class="toolbar-field"><span class="muted small">Employee</span>
+      <input class="input toolbar-search-sm" type="search" name="q" value="{{ f.q }}" placeholder="Name or ID"></label>
+    {% if f.status %}<input type="hidden" name="status" value="{{ f.status }}">{% endif %}
+    <button class="btn btn-secondary toolbar-go" type="submit">Apply</button>
+  </form>
+
+  <div class="chips">
+    <a class="chip" href="{{ url_for('admin.attendance', **base) }}" {% if not f.status %}aria-current="true"{% endif %}>All {{ result.counts.all }}</a>
+    {% for key, label in (('on_time', 'On time'), ('late', 'Late'), ('absent', 'Absent')) %}
+      <a class="chip" href="{{ url_for('admin.attendance', status=key, **base) }}" {% if f.status == key %}aria-current="true"{% endif %}>{{ label }} {{ result.counts[key] }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="card table-card mt-4">
+    <table class="table">
+      <thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>In</th><th>Out</th><th>Hours</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for r in result.rows %}
+          <tr>
+            <td class="muted">{{ r.work_date | day }}</td>
+            <td><div class="row"><span class="avatar">{{ r.initials }}</span><div><div>{{ r.full_name }}</div><div class="muted small">{{ r.employee_code }}</div></div></div></td>
+            <td class="muted">{{ r.department }}</td>
+            <td>{{ r.in_time }}</td>
+            <td class="{{ 'warn' if r.out_time == 'Missing' else '' }}">{{ r.out_time }}</td>
+            <td>{{ r.hours }}</td>
+            <td>
+              {% if r.status == 'on_time' %}<span class="pill pill-ok">On time</span>
+              {% elif r.status == 'late' %}<span class="pill pill-late">Late</span>
+              {% else %}<span class="pill pill-bad">Absent</span>{% endif %}
+            </td>
+            <td class="right nowrap">
+              {% if r.id %}
+                {% if r.source == 'manual' %}<span class="pill small" title="{{ r.note or '' }}">Manual</span>{% endif %}
+                <a href="{{ url_for('admin.attendance_edit', record_id=r.id) }}">Edit</a>
+              {% else %}
+                <a href="{{ url_for('admin.attendance_new', employee=r.employee_id, date=r.work_date) }}">Add entry</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="empty-cell">No records match these filters.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if result.total %}
+      <div class="pager">
+        <span class="muted">Showing {{ result.first }}–{{ result.last }} of {{ result.total }}</span>
+        {% if result.pages > 1 %}
+          <nav aria-label="Pages">
+            {% if result.page > 1 %}<a href="{{ url_for('admin.attendance', page=result.page - 1, **keep) }}">‹ Previous</a>{% endif %}
+            {% for n in result.numbers %}
+              {% if n is none %}<span class="page muted">…</span>
+              {% elif n == result.page %}<a href="#" aria-current="page">{{ n }}</a>
+              {% else %}<a href="{{ url_for('admin.attendance', page=n, **keep) }}">{{ n }}</a>{% endif %}
+            {% endfor %}
+            {% if result.page < result.pages %}<a href="{{ url_for('admin.attendance', page=result.page + 1, **keep) }}">Next ›</a>{% endif %}
+          </nav>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+  <p class="muted small mt-3">Absent means a working day (Monday to Friday) before today with no record. Public holidays aren't tracked yet.</p>
+{% endblock %}

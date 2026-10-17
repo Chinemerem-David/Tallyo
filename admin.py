@@ -1,10 +1,12 @@
 """Admin pages. Built one at a time: Employees first, then Cards, Users, ..."""
+import csv
 import io
 from datetime import date
 
-from flask import (Blueprint, abort, current_app, flash, redirect, render_template, request,
-                   send_file, session, url_for)
+from flask import (Blueprint, Response, abort, current_app, flash, redirect, render_template,
+                   request, send_file, session, url_for)
 
+import attendance_service
 import auth
 import backup_service
 import card_service
@@ -358,3 +360,116 @@ def employee_reset_password(employee_id):
         flash(_temp_password_message("Password reset for %s." % user["full_name"], user["username"], password),
               "success")
     return redirect(url_for("admin.employee_edit", employee_id=employee_id))
+
+
+# ---- Attendance: the full log, export, manual entries and corrections ------------
+
+def _attendance_filters():
+    today = date.today()
+    start, end, trimmed = queries.resolve_range(request.args.get("from"), request.args.get("to"), today)
+    status = request.args.get("status", "")
+    return {"start": start, "end": end, "trimmed": trimmed, "today": today,
+            "q": request.args.get("q", "").strip()[:60], "dept": request.args.get("dept", "")[:40],
+            "status": status if status in queries.ATTENDANCE_STATUSES else ""}
+
+
+@bp.route("/attendance")
+@admin_only
+def attendance():
+    f, conn = _attendance_filters(), db.get_db()
+    result = queries.list_attendance(conn, f["start"], f["end"], f["today"], f["q"], f["dept"],
+                                     f["status"], request.args.get("page", 1, type=int))
+    base = {"from": f["start"].isoformat(), "to": f["end"].isoformat(),
+            "q": f["q"] or None, "dept": f["dept"] or None}
+    c = result["counts"]
+    arrivals = c["on_time"] + c["late"]
+    return render_template(
+        "admin_attendance.html", result=result, f=f, base=base,
+        keep={**base, "status": f["status"] or None}, departments=queries.departments(conn),
+        on_time_pct=round(100 * c["on_time"] / arrivals) if arrivals else None,
+        **shell_context("Attendance"))
+
+
+@bp.route("/attendance/export")
+@admin_only
+def attendance_export():
+    """The same filters as the page, but every matching row, as a CSV for Excel."""
+    f = _attendance_filters()
+    rows = queries.list_attendance(db.get_db(), f["start"], f["end"], f["today"], f["q"], f["dept"],
+                                   f["status"], paginate=False)["rows"]
+    out = io.StringIO(newline="")
+    writer = csv.writer(out)
+    writer.writerow(["date", "employee_id", "name", "department", "check_in", "check_out",
+                     "hours", "status", "source", "note"])
+    for r in rows:
+        writer.writerow([export_service.safe_cell(v) for v in (
+            r["work_date"], r["employee_code"], r["full_name"], r["department"],
+            r["check_in"][11:16] if r["check_in"] else "", r["check_out"][11:16] if r["check_out"] else "",
+            r["hours"] if r["hours"] != "–" else "", r["status"], r["source"] or "", r["note"] or "")])
+    name = "tallyo-attendance-%s-to-%s.csv" % (f["start"], f["end"])
+    return Response("\ufeff" + out.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="%s"' % name})
+
+
+def _attendance_form(creating, values, errors, record=None, status=200):
+    return render_template(
+        "admin_attendance_form.html", creating=creating, values=values, errors=errors, record=record,
+        employees=queries.active_employees(db.get_db()) if creating else [],
+        **shell_context("Attendance")), status
+
+
+@bp.route("/attendance/new", methods=["GET", "POST"])
+@admin_only
+def attendance_new():
+    conn = db.get_db()
+    if request.method == "POST":
+        auth.verify_csrf()
+        try:
+            clean = attendance_service.validate(conn, request.form)
+            attendance_service.create_record(conn, clean)
+        except employee_service.ValidationError as err:
+            return _attendance_form(True, err.values, err.errors, status=422)
+        person = queries.get_employee(conn, clean["employee_id"])
+        flash("Entry added for %s on %s." % (person["full_name"], clean["work_date"]), "success")
+        return redirect(url_for("admin.attendance"))
+    day = request.args.get("date", "")
+    try:
+        date.fromisoformat(day)
+    except ValueError:
+        day = date.today().isoformat()
+    return _attendance_form(True, {"employee_id": request.args.get("employee", ""), "work_date": day,
+                                   "check_in": "", "check_out": "", "reason": ""}, {})
+
+
+@bp.route("/attendance/<int:record_id>/edit", methods=["GET", "POST"])
+@admin_only
+def attendance_edit(record_id):
+    conn = db.get_db()
+    record = queries.get_attendance(conn, record_id)
+    if record is None:
+        abort(404)
+    if request.method == "POST":
+        auth.verify_csrf()
+        try:
+            clean = attendance_service.validate(conn, request.form, existing=record)
+        except employee_service.ValidationError as err:
+            return _attendance_form(False, err.values, err.errors, record, 422)
+        attendance_service.update_record(conn, record_id, clean)
+        flash("Record for %s on %s updated." % (record["full_name"], record["work_date"]), "success")
+        return redirect(url_for("admin.attendance"))
+    return _attendance_form(False, {"check_in": record["check_in"][11:16],
+                                    "check_out": (record["check_out"] or "")[11:16],
+                                    "reason": record["note"] or ""}, {}, record)
+
+
+@bp.route("/attendance/<int:record_id>/delete", methods=["POST"])
+@admin_only
+def attendance_delete(record_id):
+    conn = db.get_db()
+    record = queries.get_attendance(conn, record_id)
+    if record is None:
+        abort(404)
+    auth.verify_csrf()
+    attendance_service.delete_record(conn, record_id)
+    flash("Record for %s on %s deleted." % (record["full_name"], record["work_date"]), "success")
+    return redirect(url_for("admin.attendance"))

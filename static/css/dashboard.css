@@ -138,3 +138,14 @@
 .row-action { margin-left: var(--space-3); }
 .yes { color: var(--ok-fg); font-weight: 700; }
 .static-value { padding: 0.75rem 0; color: var(--text); }
+
+
+/* ---- Attendance log -------------------------------------------------------- */
+
+.toolbar { align-items: flex-end; }
+.toolbar-field { display: grid; gap: 0.125rem; }
+.toolbar-date { width: 10.5rem; max-width: 100%; }
+.toolbar-search-sm { width: 12rem; max-width: 100%; }
+.toolbar-go { align-self: flex-end; }
+.warn { color: var(--late-fg); }
+.nowrap { white-space: nowrap; }

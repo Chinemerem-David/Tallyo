@@ -87,7 +87,8 @@ class ListPage(unittest.TestCase):
         self.assertIn('href="/admin/employees"', html)
         self.assertIn('href="/admin/cards"', html)
         self.assertIn('href="/admin/users"', html)
-        self.assertRegex(html, r'href="#"[^>]*>Attendance')
+        self.assertIn('href="/admin/attendance"', html)
+        self.assertRegex(html, r'href="#"[^>]*>Reports')
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ import backup_service
 import db
 import queries
 import reader
-from shell import friendly_when, safe_url, shell_context
+from shell import day_label, friendly_when, safe_url, shell_context
 
 app = Flask(__name__)
 app.config.update(
@@ -31,6 +31,7 @@ app.register_blueprint(auth.bp)
 app.register_blueprint(account.bp)
 app.register_blueprint(admin.bp)
 app.add_template_filter(friendly_when, "when")
+app.add_template_filter(day_label, "day")
 db.init_app(app)
 
 # The product name lives in ONE place.

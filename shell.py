@@ -55,3 +55,9 @@ def friendly_when(stamp, today=None):
         return "Today " + stamp[11:16]
     day = datetime.strptime(stamp[:10], "%Y-%m-%d")
     return "%d %s %s" % (day.day, day.strftime("%b"), stamp[11:16])
+
+
+def day_label(iso_date):
+    """'2026-10-12' -> 'Mon 12 Oct'."""
+    d = datetime.strptime(iso_date, "%Y-%m-%d")
+    return "%s %d %s" % (d.strftime("%a"), d.day, d.strftime("%b"))
