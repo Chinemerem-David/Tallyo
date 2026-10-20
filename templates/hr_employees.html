@@ -1,0 +1,65 @@
+{% extends "app_shell.html" %}
+{% block title %}Employees · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">Employees</h1>
+  <p class="muted mt-1">{{ counts.active }} people · view only. Contact an admin to change details.</p>
+
+  <form class="toolbar mt-5" method="get" action="{{ url_for('hr.employees') }}">
+    <input class="input toolbar-search" type="search" name="q" value="{{ q }}" placeholder="Search name or ID" aria-label="Search employees">
+    <select class="input toolbar-select" name="dept" aria-label="Department">
+      <option value="">All departments</option>
+      {% for d in departments %}<option value="{{ d }}" {% if d == dept %}selected{% endif %}>{{ d }}</option>{% endfor %}
+    </select>
+    {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q or dept %}<a class="muted" href="{{ url_for('hr.employees', status=status or None) }}">Clear</a>{% endif %}
+  </form>
+
+  <div class="chips">
+    <a class="chip" href="{{ url_for('hr.employees', q=q or None, dept=dept or None) }}" {% if not status %}aria-current="true"{% endif %}>All {{ counts.active }}</a>
+    <a class="chip" href="{{ url_for('hr.employees', q=q or None, dept=dept or None, status='inactive') }}" {% if status == 'inactive' %}aria-current="true"{% endif %}>Inactive {{ counts.inactive }}</a>
+  </div>
+
+  <div class="card table-card mt-4">
+    <table class="table">
+      <thead><tr><th>Employee</th><th>ID</th><th>Department</th><th>Joined</th><th>This month</th><th></th></tr></thead>
+      <tbody>
+        {% for e in result.rows %}
+          {% set rate = rates.get(e.id) %}
+          <tr>
+            <td><div class="row"><span class="avatar">{{ e.initials }}</span><span>{{ e.full_name }}</span></div></td>
+            <td class="muted">{{ e.employee_code }}</td>
+            <td>{{ e.department }}</td>
+            <td class="muted">{{ e.joined_on }}</td>
+            <td>
+              {% if rate is not none %}
+                <div class="row gap-3"><span class="meter"><span class="meter-fill {{ 'bar-low' if rate < 90 else '' }}" style="width: {{ rate }}%"></span></span>{{ rate }}%</div>
+              {% else %}<span class="muted">–</span>{% endif %}
+            </td>
+            <td class="right"><a href="{{ url_for('hr.employee', employee_id=e.id) }}">View</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty-cell">No employees match your search.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if result.total %}
+      <div class="pager">
+        <span class="muted">Showing {{ result.first }}–{{ result.last }} of {{ result.total }}</span>
+        {% if result.pages > 1 %}
+          <nav aria-label="Pages">
+            {% if result.page > 1 %}<a href="{{ url_for('hr.employees', page=result.page - 1, **keep) }}">‹ Previous</a>{% endif %}
+            {% for n in result.numbers %}
+              {% if n is none %}<span class="page muted">…</span>
+              {% elif n == result.page %}<a href="#" aria-current="page">{{ n }}</a>
+              {% else %}<a href="{{ url_for('hr.employees', page=n, **keep) }}">{{ n }}</a>{% endif %}
+            {% endfor %}
+            {% if result.page < result.pages %}<a href="{{ url_for('hr.employees', page=result.page + 1, **keep) }}">Next ›</a>{% endif %}
+          </nav>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

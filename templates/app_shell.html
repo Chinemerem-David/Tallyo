@@ -23,7 +23,7 @@
     </nav>
 
     <div class="sidebar-footer">
-      {% block sidebar_footer %}<span class="dot{{ '' if reader.connected else ' dot-off' }}"></span> {{ reader.label }}{% endblock %}
+      {% block sidebar_footer %}{% if role_key == 'hr' %}HR access is view and export only. Contact an admin to change employees or cards.{% else %}<span class="dot {{ '' if reader.connected else 'dot-off' }}"></span> {{ reader.label }}{% endif %}{% endblock %}
     </div>
   </aside>
 

@@ -184,3 +184,12 @@ html[data-theme="dark"] { --chart-ok: #B8E62E; --chart-low: #E2A52B; }
   .card { break-inside: avoid; }
   .bar, .meter-fill, .pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+
+/* ---- HR dashboard --------------------------------------------------------- */
+
+.grid-three { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--space-4); align-items: start; }
+.alert-info { background: var(--soft); color: var(--text); }
+.dept-row { margin-top: var(--space-4); font-size: 0.9375rem; }
+.meter-wide { width: 100%; margin-top: 0.375rem; }
+.profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--space-4); }

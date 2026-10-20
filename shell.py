@@ -14,7 +14,7 @@ ADMIN_MENU = [
                 ("Settings", "admin.settings")]),
     ("Records", [("Attendance", "admin.attendance"), ("Reports", "admin.reports")]),
 ]
-HR_MENU = [("Records", [("Today", "hr_home"), ("Attendance", "hr.attendance"),
+HR_MENU = [("Records", [("Today", "hr.today"), ("Attendance", "hr.attendance"),
                         ("Reports", "hr.reports"), ("Employees", "hr.employees")])]
 EMPLOYEE_MENU = [("My attendance", [("This month", "portal_home")])]
 MENUS = {"admin": ADMIN_MENU, "hr": HR_MENU, "employee": EMPLOYEE_MENU}
@@ -42,7 +42,7 @@ def shell_context(active=None):
                                       for name, endpoint in links]}
            for label, links in MENUS[role]]
     return {"nav": nav, "active": active or DEFAULT_ACTIVE[role],
-            "role_label": auth.ROLE_LABELS[role],
+            "role_label": auth.ROLE_LABELS[role], "role_key": role,
             "user_name": user["name"], "user_initials": initials(user["name"])}
 
 

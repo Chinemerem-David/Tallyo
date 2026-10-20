@@ -27,7 +27,7 @@ ROLE_BY_KEY = {r["key"]: r for r in ROLES}
 ROLE_LABELS = {"admin": "Admin", "hr": "HR manager", "employee": "Employee"}
 
 # Where each role lands after signing in (these are endpoint names in app.py).
-ROLE_HOME = {"admin": "admin_home", "hr": "hr_home", "employee": "portal_home"}
+ROLE_HOME = {"admin": "admin_home", "hr": "hr.today", "employee": "portal_home"}
 
 # Checked when the username doesn't exist, so a wrong username takes as long
 # as a wrong password and an attacker can't tell the two apart by timing.

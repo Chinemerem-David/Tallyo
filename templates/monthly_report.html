@@ -6,9 +6,9 @@
     <div class="row wrap gap-4">
       <h1 class="page-title">{{ month_label }}</h1>
       <span class="row gap-2 no-print">
-        <a class="btn btn-secondary btn-icon" href="{{ url_for('admin.reports', month=prev.strftime('%Y-%m')) }}" aria-label="Previous month">‹</a>
+        <a class="btn btn-secondary btn-icon" href="{{ url_for(report_endpoint, month=prev.strftime('%Y-%m')) }}" aria-label="Previous month">‹</a>
         {% if next_month %}
-          <a class="btn btn-secondary btn-icon" href="{{ url_for('admin.reports', month=next_month.strftime('%Y-%m')) }}" aria-label="Next month">›</a>
+          <a class="btn btn-secondary btn-icon" href="{{ url_for(report_endpoint, month=next_month.strftime('%Y-%m')) }}" aria-label="Next month">›</a>
         {% else %}
           <span class="btn btn-secondary btn-icon is-disabled" aria-disabled="true" aria-label="No later month">›</span>
         {% endif %}
@@ -16,7 +16,7 @@
     </div>
     <div class="row wrap gap-3 no-print">
       <button class="btn btn-secondary" type="button" onclick="window.print()">Print / PDF</button>
-      <a class="btn" href="{{ url_for('admin.reports_export', month=first.strftime('%Y-%m')) }}">Export CSV</a>
+      <a class="btn" href="{{ url_for(export_endpoint, month=first.strftime('%Y-%m')) }}">Export CSV</a>
     </div>
   </div>
   <p class="muted mt-1">Monthly attendance report · working days that have finished</p>

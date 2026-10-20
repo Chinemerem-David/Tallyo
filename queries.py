@@ -121,7 +121,7 @@ def page_numbers(page, pages):
     return out
 
 
-def list_employees(db, q="", dept="", status="", page=1, per_page=PER_PAGE):
+def list_employees(db, q="", dept="", status="", page=1, per_page=PER_PAGE, with_cards=True):
     """status: '' = active people, 'no_card' = active without a card, 'inactive'."""
     where, params = [], []
     where.append("e.is_active = 0" if status == "inactive" else "e.is_active = 1")
@@ -137,9 +137,10 @@ def list_employees(db, q="", dept="", status="", page=1, per_page=PER_PAGE):
     total = db.execute(f"SELECT COUNT(*) FROM employees e WHERE {clause}", params).fetchone()[0]
     pages = max((total + per_page - 1) // per_page, 1)
     page = min(max(page, 1), pages)
+    card_column = ("(SELECT c.uid FROM cards c WHERE c.employee_id = e.id AND c.status = 'active')"
+                   if with_cards else "NULL")
     rows = db.execute(f"""
-        SELECT e.*, (SELECT c.uid FROM cards c
-                     WHERE c.employee_id = e.id AND c.status = 'active') AS card_uid
+        SELECT e.*, {card_column} AS card_uid
         FROM employees e WHERE {clause}
         ORDER BY e.full_name COLLATE NOCASE LIMIT ? OFFSET ?""",
         params + [per_page, (page - 1) * per_page]).fetchall()
@@ -281,8 +282,10 @@ def resolve_range(from_text, to_text, today):
     return start, end, trimmed
 
 
-def _attendance_where(q, dept, status):
+def _attendance_where(q, dept, status, employee_id=None):
     where, params = ["1 = 1"], {}
+    if employee_id:
+        where.append("r.employee_id = :emp"); params["emp"] = int(employee_id)
     if dept:
         where.append("e.department = :dept"); params["dept"] = dept
     if q:
@@ -315,9 +318,9 @@ def _decorate(row, today):
 
 
 def list_attendance(db, start, end, today, q="", dept="", status="", page=1,
-                    per_page=ATTENDANCE_PER_PAGE, paginate=True):
+                    per_page=ATTENDANCE_PER_PAGE, paginate=True, employee_id=None):
     """Present and absent days together. Returns rows, total, per-status counts."""
-    base, where, params = _attendance_where(q, dept, status)
+    base, where, params = _attendance_where(q, dept, status, employee_id)
     params.update(start=start.isoformat(), end=end.isoformat(), today=today.isoformat())
     join = " FROM records r JOIN employees e ON e.id = r.employee_id WHERE "
 
@@ -435,3 +438,52 @@ def report_month(db, first, today):
         "departments": sorted(({"name": k, "rate": _pct(v["present"], v["total"]), "late": v["late"]}
                                for k, v in by_dept.items()), key=lambda x: x["name"].lower()),
     }
+
+
+# ---- HR dashboard ----------------------------------------------------------------
+
+def hr_today(db, day):
+    """Who is in, who is late, who hasn't arrived, and how each department is doing."""
+    iso, working = day.isoformat(), day.weekday() < 5
+    people = db.execute("""SELECT id, employee_code, full_name, department FROM employees
+                           WHERE is_active = 1 AND joined_on <= ? ORDER BY full_name COLLATE NOCASE""", (iso,)).fetchall()
+    records = {r["employee_id"]: r for r in db.execute(
+        "SELECT employee_id, check_in, status FROM attendance WHERE work_date = ?", (iso,))}
+    late, not_in, everyone, depts, present = [], [], [], {}, 0
+    for p in people:
+        parts = p["full_name"].split()
+        row = {"name": p["full_name"], "code": p["employee_code"], "department": p["department"],
+               "initials": (parts[0][0] + parts[-1][0]).upper()}
+        d = depts.setdefault(p["department"], {"name": p["department"], "present": 0, "total": 0})
+        d["total"] += 1
+        rec = records.get(p["id"])
+        if rec:
+            present += 1
+            d["present"] += 1
+            if rec["status"] == "late":
+                late.append({**row, "time": rec["check_in"][11:16], "stamp": rec["check_in"]})
+            everyone.append({**row, "status": rec["status"], "time": rec["check_in"][11:16]})
+        else:
+            if working:
+                not_in.append(row)
+            everyone.append({**row, "status": "not_in_yet" if working else "no_work_today", "time": ""})
+    late.sort(key=lambda r: r["stamp"], reverse=True)
+    for d in depts.values():
+        d["pct"] = _pct(d["present"], d["total"])
+    return {"working_day": working, "total": len(people), "present": present, "late": late,
+            "not_in": not_in, "everyone": everyone,
+            "departments": sorted(depts.values(), key=lambda d: d["name"].lower())}
+
+
+def employee_month_rates(db, ids, today):
+    """{employee_id: % of finished working days this month they were present}."""
+    first, end = today.replace(day=1), today - timedelta(days=1)
+    if not ids or end < first:
+        return {}
+    params = {"start": first.isoformat(), "end": end.isoformat(), "today": today.isoformat()}
+    params.update({"i%d" % n: int(v) for n, v in enumerate(ids)})
+    marks = ", ".join(":i%d" % n for n in range(len(ids)))
+    rows = db.execute(_RECORDS + """SELECT r.employee_id, SUM(r.status != 'absent') AS present, COUNT(*) AS total
+        FROM records r WHERE strftime('%w', r.work_date) NOT IN ('0', '6') AND r.employee_id IN (""" + marks +
+        ") GROUP BY r.employee_id", params).fetchall()
+    return {r["employee_id"]: _pct(r["present"], r["total"]) for r in rows}

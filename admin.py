@@ -15,6 +15,7 @@ import employee_service
 import export_service
 import queries
 import reader
+import reporting
 import settings_service
 import user_service
 from shell import shell_context
@@ -364,51 +365,19 @@ def employee_reset_password(employee_id):
 
 # ---- Attendance: the full log, export, manual entries and corrections ------------
 
-def _attendance_filters():
-    today = date.today()
-    start, end, trimmed = queries.resolve_range(request.args.get("from"), request.args.get("to"), today)
-    status = request.args.get("status", "")
-    return {"start": start, "end": end, "trimmed": trimmed, "today": today,
-            "q": request.args.get("q", "").strip()[:60], "dept": request.args.get("dept", "")[:40],
-            "status": status if status in queries.ATTENDANCE_STATUSES else ""}
-
-
 @bp.route("/attendance")
 @admin_only
 def attendance():
-    f, conn = _attendance_filters(), db.get_db()
-    result = queries.list_attendance(conn, f["start"], f["end"], f["today"], f["q"], f["dept"],
-                                     f["status"], request.args.get("page", 1, type=int))
-    base = {"from": f["start"].isoformat(), "to": f["end"].isoformat(),
-            "q": f["q"] or None, "dept": f["dept"] or None}
-    c = result["counts"]
-    arrivals = c["on_time"] + c["late"]
-    return render_template(
-        "admin_attendance.html", result=result, f=f, base=base,
-        keep={**base, "status": f["status"] or None}, departments=queries.departments(conn),
-        on_time_pct=round(100 * c["on_time"] / arrivals) if arrivals else None,
-        **shell_context("Attendance"))
+    return render_template("attendance_log.html", list_endpoint="admin.attendance",
+                           export_endpoint="admin.attendance_export", can_edit=True,
+                           **reporting.attendance_context(db.get_db(), request.args),
+                           **shell_context("Attendance"))
 
 
 @bp.route("/attendance/export")
 @admin_only
 def attendance_export():
-    """The same filters as the page, but every matching row, as a CSV for Excel."""
-    f = _attendance_filters()
-    rows = queries.list_attendance(db.get_db(), f["start"], f["end"], f["today"], f["q"], f["dept"],
-                                   f["status"], paginate=False)["rows"]
-    out = io.StringIO(newline="")
-    writer = csv.writer(out)
-    writer.writerow(["date", "employee_id", "name", "department", "check_in", "check_out",
-                     "hours", "status", "source", "note"])
-    for r in rows:
-        writer.writerow([export_service.safe_cell(v) for v in (
-            r["work_date"], r["employee_code"], r["full_name"], r["department"],
-            r["check_in"][11:16] if r["check_in"] else "", r["check_out"][11:16] if r["check_out"] else "",
-            r["hours"] if r["hours"] != "–" else "", r["status"], r["source"] or "", r["note"] or "")])
-    name = "tallyo-attendance-%s-to-%s.csv" % (f["start"], f["end"])
-    return Response("\ufeff" + out.getvalue(), mimetype="text/csv",
-                    headers={"Content-Disposition": 'attachment; filename="%s"' % name})
+    return reporting.attendance_csv(db.get_db(), request.args)
 
 
 def _attendance_form(creating, values, errors, record=None, status=200):
@@ -480,26 +449,12 @@ def attendance_delete(record_id):
 @bp.route("/reports")
 @admin_only
 def reports():
-    today = date.today()
-    first = queries.resolve_month(request.args.get("month"), today)
-    prev, nxt = queries.month_neighbours(first, today)
-    return render_template(
-        "admin_reports.html", report=queries.report_month(db.get_db(), first, today), first=first,
-        month_label=first.strftime("%B %Y"), prev=prev, next_month=nxt, low_rate=queries.LOW_RATE,
-        **shell_context("Reports"))
+    return render_template("monthly_report.html", report_endpoint="admin.reports",
+                           export_endpoint="admin.reports_export",
+                           **reporting.report_context(db.get_db(), request.args), **shell_context("Reports"))
 
 
 @bp.route("/reports/export")
 @admin_only
 def reports_export():
-    """One row per working day for the chosen month."""
-    today = date.today()
-    first = queries.resolve_month(request.args.get("month"), today)
-    report = queries.report_month(db.get_db(), first, today)
-    out = io.StringIO(newline="")
-    writer = csv.writer(out)
-    writer.writerow(["date", "expected", "present", "late", "absent", "attendance_rate_percent"])
-    for d in report["days"]:
-        writer.writerow([d["date"], d["total"], d["present"], d["late"], d["absent"], d["rate"]])
-    return Response("\ufeff" + out.getvalue(), mimetype="text/csv", headers={
-        "Content-Disposition": 'attachment; filename="tallyo-report-%s.csv"' % first.strftime("%Y-%m")})
+    return reporting.report_csv(db.get_db(), request.args)

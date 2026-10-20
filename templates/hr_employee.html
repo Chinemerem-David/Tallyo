@@ -1,0 +1,57 @@
+{% extends "app_shell.html" %}
+{% block title %}{{ person.full_name }} · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <a class="back muted" href="{{ url_for('hr.employees') }}">‹ Employees</a>
+  <h1 class="page-title mt-3">{{ person.full_name }}</h1>
+  <p class="muted mt-1">{{ person.employee_code }} · {{ person.department }}
+    {% if not person.is_active %}· <strong>Inactive</strong>{% endif %}</p>
+
+  <div class="card card-pad mt-5">
+    <div class="profile">
+      <div><div class="muted small">Email</div><div>{{ person.email or '–' }}</div></div>
+      <div><div class="muted small">Joined</div><div>{{ person.joined_on }}</div></div>
+      <div><div class="muted small">Attendance this month</div><div>{{ (rate|string ~ '%') if rate is not none else '–' }}</div></div>
+    </div>
+  </div>
+
+  <div class="grid-cards mt-4">
+    <div class="card tile"><div class="tile-label">On time</div><div class="tile-value">{{ result.counts.on_time }}</div></div>
+    <div class="card tile"><div class="tile-label">Late</div><div class="tile-value">{{ result.counts.late }}</div></div>
+    <div class="card tile"><div class="tile-label">Absent</div><div class="tile-value">{{ result.counts.absent }}</div></div>
+  </div>
+  <p class="muted small mt-3">The last 30 days.</p>
+
+  <div class="card table-card mt-3">
+    <table class="table">
+      <thead><tr><th>Date</th><th>In</th><th>Out</th><th>Hours</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in result.rows %}
+          <tr>
+            <td class="muted">{{ r.work_date | day }}</td>
+            <td>{{ r.in_time }}</td>
+            <td class="{{ 'warn' if r.out_time == 'Missing' else '' }}">{{ r.out_time }}</td>
+            <td>{{ r.hours }}</td>
+            <td>
+              {% if r.status == 'on_time' %}<span class="pill pill-ok">On time</span>
+              {% elif r.status == 'late' %}<span class="pill pill-late">Late</span>
+              {% else %}<span class="pill pill-bad">Absent</span>{% endif %}
+              {% if r.source == 'manual' %}<span class="pill small" title="{{ r.note or '' }}">Manual</span>{% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty-cell">No records in the last 30 days.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if result.pages > 1 %}
+      <div class="pager">
+        <span class="muted">Showing {{ result.first }}–{{ result.last }} of {{ result.total }}</span>
+        <nav aria-label="Pages">
+          {% if result.page > 1 %}<a href="{{ url_for('hr.employee', employee_id=person.id, page=result.page - 1) }}">‹ Previous</a>{% endif %}
+          {% if result.page < result.pages %}<a href="{{ url_for('hr.employee', employee_id=person.id, page=result.page + 1) }}">Next ›</a>{% endif %}
+        </nav>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -9,14 +9,14 @@
         · {{ f.start.isoformat() | day }} to {{ f.end.isoformat() | day }}</p>
     </div>
     <div class="row wrap gap-3">
-      <a class="btn btn-secondary" href="{{ url_for('admin.attendance_export', **keep) }}">Export CSV</a>
-      <a class="btn" href="{{ url_for('admin.attendance_new') }}">+ Add manual entry</a>
+      <a class="btn btn-secondary" href="{{ url_for(export_endpoint, **keep) }}">Export CSV</a>
+      {% if can_edit %}<a class="btn" href="{{ url_for('admin.attendance_new') }}">+ Add manual entry</a>{% endif %}
     </div>
   </div>
 
   {% if f.trimmed %}<div class="alert alert-error mt-4" role="status">Showing the latest 92 days only. Pick a shorter range to see older records.</div>{% endif %}
 
-  <form class="toolbar mt-5" method="get" action="{{ url_for('admin.attendance') }}">
+  <form class="toolbar mt-5" method="get" action="{{ url_for(list_endpoint) }}">
     <label class="toolbar-field"><span class="muted small">From</span>
       <input class="input toolbar-date" type="date" name="from" value="{{ f.start.isoformat() }}"></label>
     <label class="toolbar-field"><span class="muted small">To</span>
@@ -33,9 +33,9 @@
   </form>
 
   <div class="chips">
-    <a class="chip" href="{{ url_for('admin.attendance', **base) }}" {% if not f.status %}aria-current="true"{% endif %}>All {{ result.counts.all }}</a>
+    <a class="chip" href="{{ url_for(list_endpoint, **base) }}" {% if not f.status %}aria-current="true"{% endif %}>All {{ result.counts.all }}</a>
     {% for key, label in (('on_time', 'On time'), ('late', 'Late'), ('absent', 'Absent')) %}
-      <a class="chip" href="{{ url_for('admin.attendance', status=key, **base) }}" {% if f.status == key %}aria-current="true"{% endif %}>{{ label }} {{ result.counts[key] }}</a>
+      <a class="chip" href="{{ url_for(list_endpoint, status=key, **base) }}" {% if f.status == key %}aria-current="true"{% endif %}>{{ label }} {{ result.counts[key] }}</a>
     {% endfor %}
   </div>
 
@@ -59,8 +59,8 @@
             <td class="right nowrap">
               {% if r.id %}
                 {% if r.source == 'manual' %}<span class="pill small" title="{{ r.note or '' }}">Manual</span>{% endif %}
-                <a href="{{ url_for('admin.attendance_edit', record_id=r.id) }}">Edit</a>
-              {% else %}
+                {% if can_edit %}<a href="{{ url_for('admin.attendance_edit', record_id=r.id) }}">Edit</a>{% endif %}
+              {% elif can_edit %}
                 <a href="{{ url_for('admin.attendance_new', employee=r.employee_id, date=r.work_date) }}">Add entry</a>
               {% endif %}
             </td>
@@ -76,13 +76,13 @@
         <span class="muted">Showing {{ result.first }}–{{ result.last }} of {{ result.total }}</span>
         {% if result.pages > 1 %}
           <nav aria-label="Pages">
-            {% if result.page > 1 %}<a href="{{ url_for('admin.attendance', page=result.page - 1, **keep) }}">‹ Previous</a>{% endif %}
+            {% if result.page > 1 %}<a href="{{ url_for(list_endpoint, page=result.page - 1, **keep) }}">‹ Previous</a>{% endif %}
             {% for n in result.numbers %}
               {% if n is none %}<span class="page muted">…</span>
               {% elif n == result.page %}<a href="#" aria-current="page">{{ n }}</a>
-              {% else %}<a href="{{ url_for('admin.attendance', page=n, **keep) }}">{{ n }}</a>{% endif %}
+              {% else %}<a href="{{ url_for(list_endpoint, page=n, **keep) }}">{{ n }}</a>{% endif %}
             {% endfor %}
-            {% if result.page < result.pages %}<a href="{{ url_for('admin.attendance', page=result.page + 1, **keep) }}">Next ›</a>{% endif %}
+            {% if result.page < result.pages %}<a href="{{ url_for(list_endpoint, page=result.page + 1, **keep) }}">Next ›</a>{% endif %}
           </nav>
         {% endif %}
       </div>

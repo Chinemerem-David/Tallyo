@@ -14,6 +14,7 @@ import admin
 import auth
 import backup_service
 import db
+import hr
 import queries
 import reader
 from shell import day_label, friendly_when, safe_url, shell_context
@@ -30,6 +31,7 @@ app.config.update(
 app.register_blueprint(auth.bp)
 app.register_blueprint(account.bp)
 app.register_blueprint(admin.bp)
+app.register_blueprint(hr.bp)
 app.add_template_filter(friendly_when, "when")
 app.add_template_filter(day_label, "day")
 db.init_app(app)
@@ -97,12 +99,6 @@ def admin_home():
         first_name=session["user"]["name"].split()[0],
         date_label="%s %d %s" % (now.strftime("%A"), now.day, now.strftime("%B")),
         **shell_context())
-
-
-@app.route("/hr")
-@auth.role_required("hr")
-def hr_home():
-    return placeholder("HR dashboard")
 
 
 @app.route("/portal")
