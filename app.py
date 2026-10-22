@@ -15,6 +15,7 @@ import auth
 import backup_service
 import db
 import hr
+import portal
 import queries
 import reader
 from shell import day_label, friendly_when, safe_url, shell_context
@@ -32,6 +33,7 @@ app.register_blueprint(auth.bp)
 app.register_blueprint(account.bp)
 app.register_blueprint(admin.bp)
 app.register_blueprint(hr.bp)
+app.register_blueprint(portal.bp)
 app.add_template_filter(friendly_when, "when")
 app.add_template_filter(day_label, "day")
 db.init_app(app)
@@ -55,17 +57,6 @@ def no_store_when_signed_in(response):
     if "user" in session and request.endpoint != "static":
         response.headers["Cache-Control"] = "no-store"
     return response
-
-
-# ---- Placeholder pages (HR and Employee, until they are built) ---------------
-
-def placeholder(title):
-    role = session["user"]["role"]
-    others = [(label, url_for(auth.ROLE_HOME[key]))
-              for key, label in (("admin", "Admin dashboard"), ("hr", "HR dashboard"),
-                                 ("employee", "Employee portal")) if key != role]
-    return render_template("placeholder.html", title=title, others=others,
-                           **shell_context())
 
 
 # ---- Pages -------------------------------------------------------------------
@@ -99,12 +90,6 @@ def admin_home():
         first_name=session["user"]["name"].split()[0],
         date_label="%s %d %s" % (now.strftime("%A"), now.day, now.strftime("%B")),
         **shell_context())
-
-
-@app.route("/portal")
-@auth.role_required("employee")
-def portal_home():
-    return placeholder("Employee portal")
 
 
 @app.route("/style-guide")

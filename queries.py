@@ -487,3 +487,67 @@ def employee_month_rates(db, ids, today):
         FROM records r WHERE strftime('%w', r.work_date) NOT IN ('0', '6') AND r.employee_id IN (""" + marks +
         ") GROUP BY r.employee_id", params).fetchall()
     return {r["employee_id"]: _pct(r["present"], r["total"]) for r in rows}
+
+
+# ---- Employee portal: one person's month -------------------------------------------
+
+def month_options(joined_first, today, limit=36):
+    """[('2026-10', 'October 2026'), ...] newest first, back to the month they joined."""
+    out, m = [], today.replace(day=1)
+    while m >= joined_first and len(out) < limit:
+        out.append((m.strftime("%Y-%m"), m.strftime("%B %Y")))
+        m = (m - timedelta(days=1)).replace(day=1)
+    return out
+
+
+def hours_label(minutes):
+    h, m = divmod(int(minutes), 60)
+    return "%dh %02dm" % (h, m) if m else "%dh" % h
+
+
+def _minutes(start, end):
+    fmt = "%Y-%m-%d %H:%M:%S"
+    return int((datetime.strptime(end, fmt) - datetime.strptime(start, fmt)).total_seconds() // 60)
+
+
+def employee_calendar(db, employee_id, first, today):
+    """A month for ONE employee, drawn as weeks (Monday first). Each day is one of:
+    on_time, late, absent, weekend, future, pending (today, nobody tapped yet) or
+    before_join. Only a working day in the past with no record counts as absent."""
+    last = (first.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    row = db.execute("SELECT joined_on FROM employees WHERE id = ?", (employee_id,)).fetchone()
+    joined = row["joined_on"] if row else "9999-12-31"
+    records = {r["work_date"]: r for r in db.execute(
+        "SELECT work_date, check_in, check_out, status FROM attendance "
+        "WHERE employee_id = ? AND work_date BETWEEN ? AND ?",
+        (employee_id, first.isoformat(), last.isoformat()))}
+    today_iso, cells, minutes, d = today.isoformat(), [], 0, first
+    while d <= last:
+        iso, rec, title = d.isoformat(), records.get(d.isoformat()), ""
+        if rec:
+            state = rec["status"]
+            if rec["check_out"]:
+                spent = _minutes(rec["check_in"], rec["check_out"])
+                minutes += spent
+                title = "%s to %s (%s)" % (rec["check_in"][11:16], rec["check_out"][11:16], hours_label(spent))
+            else:
+                title = "%s, no check-out recorded" % rec["check_in"][11:16]
+        elif iso > today_iso:
+            state = "future"
+        elif iso == today_iso:
+            state = "pending"
+        elif d.weekday() >= 5:
+            state = "weekend"
+        elif iso < joined:
+            state = "before_join"
+        else:
+            state = "absent"
+        cells.append({"day": d.day, "iso": iso, "state": state, "weekend": d.weekday() >= 5,
+                      "today": iso == today_iso, "title": title})
+        d += timedelta(days=1)
+    padded = [None] * first.weekday() + cells
+    padded += [None] * (-len(padded) % 7)
+    return {"first": first, "last": last, "joined": joined,
+            "weeks": [padded[i:i + 7] for i in range(0, len(padded), 7)],
+            "present": len(records), "late": sum(r["status"] == "late" for r in records.values()),
+            "absent": sum(c["state"] == "absent" for c in cells), "hours": hours_label(minutes)}

@@ -16,7 +16,7 @@ ADMIN_MENU = [
 ]
 HR_MENU = [("Records", [("Today", "hr.today"), ("Attendance", "hr.attendance"),
                         ("Reports", "hr.reports"), ("Employees", "hr.employees")])]
-EMPLOYEE_MENU = [("My attendance", [("This month", "portal_home")])]
+EMPLOYEE_MENU = [("My attendance", [("This month", "portal.home")])]
 MENUS = {"admin": ADMIN_MENU, "hr": HR_MENU, "employee": EMPLOYEE_MENU}
 DEFAULT_ACTIVE = {"admin": "Overview", "hr": "Today", "employee": "This month"}
 

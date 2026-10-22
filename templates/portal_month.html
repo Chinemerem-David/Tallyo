@@ -1,0 +1,60 @@
+{% extends "app_shell.html" %}
+{% block title %}My attendance · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="portal-grid">
+    <section>
+      <h1 class="page-title">Hello,<br>{{ first_name }}.</h1>
+      <p class="muted mt-3">Your attendance for {{ month_label }}.</p>
+      <div class="portal-stats mt-5">
+        <div class="stat"><div class="muted small">Days present</div><div class="stat-value">{{ cal.present }}</div></div>
+        <div class="stat"><div class="muted small">Late arrivals</div><div class="stat-value">{{ cal.late }}</div></div>
+        <div class="stat"><div class="muted small">Hours worked</div><div class="stat-value">{{ cal.hours }}</div></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="cal-head-row">
+        <form class="month-picker" method="get" action="{{ url_for('portal.home') }}">
+          <label class="visually-hidden" for="month">Choose a month</label>
+          <select class="month-select" id="month" name="month" onchange="this.form.submit()">
+            {% for value, label in months %}<option value="{{ value }}" {% if value == first.strftime('%Y-%m') %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+          <noscript><button class="btn btn-secondary" type="submit">Go</button></noscript>
+        </form>
+        <div class="row gap-2">
+          {% if prev %}<a class="btn btn-secondary btn-icon" href="{{ url_for('portal.home', month=prev.strftime('%Y-%m')) }}" aria-label="Previous month">‹</a>
+          {% else %}<span class="btn btn-secondary btn-icon is-disabled" aria-disabled="true">‹</span>{% endif %}
+          {% if next_month %}<a class="btn btn-secondary btn-icon" href="{{ url_for('portal.home', month=next_month.strftime('%Y-%m')) }}" aria-label="Next month">›</a>
+          {% else %}<span class="btn btn-secondary btn-icon is-disabled" aria-disabled="true">›</span>{% endif %}
+          {% if is_current %}<span class="btn btn-secondary is-disabled" aria-disabled="true">Today</span>
+          {% else %}<a class="btn btn-secondary" href="{{ url_for('portal.home') }}">Today</a>{% endif %}
+        </div>
+      </div>
+
+      <div class="cal" role="grid" aria-label="Attendance for {{ month_label }}">
+        {% for name in ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun') %}<div class="cal-dow" role="columnheader">{{ name }}</div>{% endfor %}
+        {% for week in cal.weeks %}{% for c in week %}
+          {% if c %}
+            <div class="cal-cell {{ 'is-weekend' if c.weekend }} {{ 'is-future' if c.state == 'future' }} {{ 'is-today' if c.today }}" role="gridcell"
+                 {% if c.title %}title="{{ c.title }}"{% endif %}>
+              <span>{{ c.day }}</span>
+              {% if c.state == 'on_time' %}<span class="cal-dot dot-ok"></span><span class="visually-hidden">On time</span>
+              {% elif c.state == 'late' %}<span class="cal-dot dot-late"></span><span class="visually-hidden">Late</span>
+              {% elif c.state == 'absent' %}<span class="cal-dot dot-absent"></span><span class="visually-hidden">Absent</span>{% endif %}
+            </div>
+          {% else %}<div class="cal-blank"></div>{% endif %}
+        {% endfor %}{% endfor %}
+      </div>
+
+      <div class="legend">
+        <span><i class="cal-dot dot-ok"></i>On time</span>
+        <span><i class="cal-dot dot-late"></i>Late</span>
+        <span><i class="cal-dot dot-absent"></i>Absent</span>
+      </div>
+      {% if cal.joined > cal.first.isoformat() %}
+        <p class="muted small mt-3">You joined on {{ cal.joined }}, so earlier days are left blank.</p>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}
