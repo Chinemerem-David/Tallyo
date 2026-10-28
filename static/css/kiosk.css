@@ -1,0 +1,93 @@
+/* ==========================================================================
+   Tallyo: kiosk.css  (the public screen next to the reader)
+   One page, five looks: idle, check in, check out, already scanned, denied.
+   Sizes use clamp() so the same page fits a wall display, a laptop or a phone.
+   ========================================================================== */
+
+.kiosk-page { margin: 0; overflow: hidden; }
+
+.screen {
+  --icon-bg: #1B3A1F;
+  --icon-fg: #B8E62E;
+  --status-colour: #1B3A1F;
+
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 clamp(28px, 7vw, 100px);
+  background: #F6F4EC; color: #17221A;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.screen-body { display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
+.screen h1 {
+  max-width: 1000px;
+  font-family: var(--font-serif); font-weight: 400; line-height: 1;
+  font-size: clamp(46px, 9vw, 128px);
+  white-space: pre-line;                    /* lets the idle title break onto two lines */
+}
+.screen-status { margin-top: clamp(18px, 2.4vw, 34px); font-size: clamp(22px, 3.4vw, 44px); font-weight: 700; color: var(--status-colour); }
+.screen-detail { margin-top: 12px; font-size: clamp(16px, 2vw, 26px); opacity: 0.85; }
+.screen-idle .screen-detail { font-size: clamp(20px, 3vw, 40px); color: #1B3A1F; opacity: 1; }
+
+/* The round tick / dash / cross above the greeting */
+.state-icon { width: clamp(72px, 7.5vw, 100px); margin-bottom: clamp(24px, 3vw, 44px); }
+.screen-idle .state-icon { display: none; }
+.icon { display: none; width: 100%; height: auto; }
+.icon circle { fill: var(--icon-bg); }
+.icon path { stroke: var(--icon-fg); }
+.screen-in .icon-tick, .screen-out .icon-tick { display: block; }
+.screen-again .icon-dash { display: block; }
+.screen-denied .icon-cross { display: block; }
+
+/* The four result looks */
+.screen-in     { background: #1B3A1F; color: #F6F4EC; --status-colour: #B8E62E; --icon-bg: #B8E62E; --icon-fg: #1B3A1F; }
+.screen-out    { background: #B8E62E; color: #17200A; --status-colour: #17200A; --icon-bg: #17200A; --icon-fg: #B8E62E; }
+.screen-again  { background: #E4E0CF; color: #2A2518; --status-colour: #5C6558; --icon-bg: #5C6558; --icon-fg: #E4E0CF; }
+.screen-denied { background: #7A2E22; color: #F6F4EC; --status-colour: #F2C9BF; --icon-bg: #9A4535; --icon-fg: #F6F4EC; }
+
+/* The idle picture only shows while idle */
+.screen-art { width: clamp(200px, 30vw, 420px); }
+.screen:not(.screen-idle) .screen-art { display: none; }
+.tap-art { width: 100%; height: auto; display: block; }
+.tap-art rect, .tap-art line, .tap-art path { stroke: #1B3A1F; stroke-width: 3; }
+.art-card rect, .art-card line { stroke: #7DB82A; }
+.art-arc { stroke: #7DB82A !important; opacity: 0.25; }
+.art-dot { fill: #7DB82A; stroke: none; transform-box: fill-box; transform-origin: center; }
+
+.art-card { transform-box: fill-box; transform-origin: center; animation: card-tap 3.2s ease-in-out infinite; }
+@keyframes card-tap {
+  0%        { transform: translateY(0) rotate(-12deg); }
+  35%, 65%  { transform: translateY(60px) rotate(-4deg); }
+  100%      { transform: translateY(0) rotate(-12deg); }
+}
+.art-arc { animation: arc-glow 3.2s ease-in-out infinite; }
+.art-arc-2 { animation-delay: 0.12s; }
+@keyframes arc-glow { 0%, 32% { opacity: 0.2; } 45%, 55% { opacity: 1; } 68%, 100% { opacity: 0.2; } }
+.art-dot { animation: dot-pulse 3.2s ease-in-out infinite; }
+@keyframes dot-pulse { 0%, 32% { transform: scale(1); } 50% { transform: scale(1.7); } 68%, 100% { transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .art-card { animation: none; transform: translateY(40px) rotate(-8deg); }
+  .art-arc, .art-dot { animation: none; opacity: 0.6; }
+  .screen { transition: none; }
+}
+
+.screen-foot {
+  position: absolute; left: clamp(28px, 7vw, 100px); right: clamp(28px, 7vw, 100px); bottom: clamp(24px, 4vw, 56px);
+  display: flex; align-items: flex-end; justify-content: space-between; opacity: 0.75;
+}
+.screen-clock { font-size: clamp(15px, 1.6vw, 22px); }
+.screen-foot .brand-name { font-size: clamp(20px, 2vw, 26px); }
+.screen-foot .brand-mark { width: 1.5rem; height: 1.5rem; }
+.screen-foot .brand { --brand-accent: #7DB82A; }
+.screen-in .screen-foot .brand { --brand-accent: #B8E62E; }
+
+.offline {
+  position: absolute; top: 1rem; right: 1rem; padding: 0.375rem 0.875rem; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 0.875rem;
+}
+
+@media (max-width: 600px) {
+  .screen-body { flex-direction: column; align-items: flex-start; justify-content: center; gap: 28px; }
+  .screen-art { order: -1; width: 72%; }
+}

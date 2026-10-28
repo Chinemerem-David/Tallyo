@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Tap your card · {{ APP_NAME }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/kiosk.css') }}">{% endblock %}
+{% block body_class %}kiosk-page{% endblock %}
+
+{% block body %}
+<main id="screen" class="screen screen-idle" aria-live="polite"
+      data-events="{{ url_for('kiosk.events') }}" data-hold="{{ hold_ms }}">
+  <div class="screen-body">
+    <div class="screen-text">
+      <div class="state-icon" aria-hidden="true">
+        <svg class="icon icon-tick" viewBox="0 0 96 96"><circle cx="48" cy="48" r="46"/><path d="M28 50 L43 65 L69 34" fill="none" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg class="icon icon-dash" viewBox="0 0 96 96"><circle cx="48" cy="48" r="46"/><path d="M28 48 H68" fill="none" stroke-width="8" stroke-linecap="round"/></svg>
+        <svg class="icon icon-cross" viewBox="0 0 96 96"><circle cx="48" cy="48" r="46"/><path d="M32 32 L64 64 M64 32 L32 64" fill="none" stroke-width="8" stroke-linecap="round"/></svg>
+      </div>
+      <h1 id="title">Tap your
+card.</h1>
+      <p id="status" class="screen-status" hidden></p>
+      <p id="detail" class="screen-detail">to check in or out</p>
+    </div>
+    <div class="screen-art">{% include "partials/tap_art.html" %}</div>
+  </div>
+
+  <footer class="screen-foot">
+    <span id="clock" class="screen-clock"></span>
+    {% include "partials/logo.html" %}
+  </footer>
+  <div id="offline" class="offline" role="status" hidden>Reconnecting…</div>
+</main>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/kiosk.js') }}"></script>{% endblock %}
