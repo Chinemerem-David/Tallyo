@@ -1,0 +1,16 @@
+{# "Tap a card on the reader". The behaviour lives in static/js/listen.js.
+   Set before including:  listen_purpose ('register' or 'test'),  listen_target (a CSS selector of the
+   input to fill, or empty). Every button here is type="button" so it never submits the form around it. #}
+<div class="listen-box" data-listen data-purpose="{{ listen_purpose }}" data-target="{{ listen_target or '' }}"
+     data-start="{{ url_for('admin.reader_listen') }}" data-cancel="{{ url_for('admin.reader_listen_cancel') }}"
+     data-status="{{ url_for('admin.reader_listen_status') }}" data-csrf="{{ csrf_token() }}">
+  <div class="listen-rings" aria-hidden="true"><i></i><i></i><b></b></div>
+  <div class="listen-text">
+    <div class="listen-message" role="status" aria-live="polite">{{ listen_idle or 'Tap a card on the reader to detect it.' }}</div>
+    {% if not reader.connected %}
+      <div class="hint">{{ reader.label }}. Nothing is detected until it is connected. To try this without the reader, run <code>python simulate_tap.py "A3 4F 91 0C"</code>.</div>
+    {% endif %}
+  </div>
+  <button class="btn btn-secondary listen-start" type="button">Start listening</button>
+  <button class="btn btn-secondary listen-cancel" type="button" hidden>Cancel</button>
+</div>

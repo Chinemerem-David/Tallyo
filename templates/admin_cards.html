@@ -13,11 +13,13 @@
       </div>
       <form class="register-form" method="post" action="{{ url_for('admin.card_register') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input class="input" type="text" name="uid" placeholder="A3 4F 91 0C" autocomplete="off"
+        <input class="input" type="text" id="register_uid" name="uid" placeholder="A3 4F 91 0C" autocomplete="off"
                spellcheck="false" aria-label="Card ID" required>
         <button class="btn" type="submit">Register card</button>
       </form>
     </div>
+    {% set listen_purpose = 'register' %}{% set listen_target = '#register_uid' %}{% set listen_idle = 'Tap a new card on the reader, then press Register card.' %}
+    <div class="mt-4">{% include "partials/listen_box.html" %}</div>
     {% if recent %}
       <div class="recent-list">
         <span class="muted small">Recently tapped, not registered:</span>
@@ -91,3 +93,5 @@
     {% endif %}
   </div>
 {% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/listen.js') }}"></script>{% endblock %}

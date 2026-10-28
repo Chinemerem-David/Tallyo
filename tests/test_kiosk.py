@@ -117,6 +117,15 @@ class Access(unittest.TestCase):
         self.assertEqual(self.remote(self.login("hr", "chiamaka", "hr123")).status_code, 403)
         self.assertEqual(self.remote(self.login("employee", "EMP-0142", "emp123")).status_code, 403)
 
+    def test_refusal_explains_how_to_fix_it(self):
+        c = self.app.test_client()
+        r = self.remote(c)
+        html = r.get_data(as_text=True)
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("The kiosk isn&#39;t available on this device", html)
+        self.assertIn("TALLYO_KIOSK_KEY", html)
+        self.assertNotIn("account", html.lower().split("<main")[1])          # the old, confusing wording is gone
+
     def test_page_and_feed(self):
         c = self.app.test_client()
         page = c.get("/kiosk")
@@ -138,6 +147,24 @@ class Access(unittest.TestCase):
         for junk in ("abc", "-5", "999999999", ""):
             r = c.get("/kiosk/events?after=" + junk)
             self.assertEqual((r.status_code, r.get_json()["events"]), (200, []), junk)
+
+
+class Helpers(unittest.TestCase):
+    def test_server_settings_from_the_environment(self):
+        from app import server_settings
+        self.assertEqual(server_settings({}), ("127.0.0.1", 5000))
+        self.assertEqual(server_settings({"TALLYO_HOST": "0.0.0.0", "TALLYO_PORT": "8080"}), ("0.0.0.0", 8080))
+        self.assertEqual(server_settings({"TALLYO_PORT": "banana"}), ("127.0.0.1", 5000))
+        self.assertEqual(server_settings({"TALLYO_PORT": "99999"})[1], 65535)
+
+    def test_simulator_warns_when_the_kiosk_will_ignore_the_tap(self):
+        import subprocess
+        root = Path(__file__).resolve().parent.parent
+        env = {**os.environ, "TALLYO_DATABASE": os.environ["TALLYO_DATABASE"]}
+        seeder.seed(os.environ["TALLYO_DATABASE"])
+        out = subprocess.run([sys.executable, "simulate_tap.py", "FF EE DD CC", "--at", "2026-10-13 17:04"],
+                             cwd=root, capture_output=True, text=True, env=env)
+        self.assertIn("only shows taps from the last 20 seconds", out.stdout)
 
 
 if __name__ == "__main__":

@@ -59,7 +59,11 @@
   function poll() {
     var url = feedUrl + (lastId === null ? "" : "?after=" + lastId);
     fetch(url, { cache: "no-store", headers: { Accept: "application/json" } })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (r) {
+        if (r.status === 403) { var denied = new Error("denied"); denied.denied = true; throw denied; }
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      })
       .then(function (data) {
         lastId = data.last_id;
         queue = queue.concat(data.events);
@@ -67,7 +71,11 @@
         offline.hidden = true;
         next();
       })
-      .catch(function () { if (++failures >= 3) offline.hidden = false; })
+      .catch(function (err) {
+        offline.textContent = err.denied ? "This device isn't allowed to use the kiosk. See the setup notes."
+                                         : "Reconnecting…";
+        if (err.denied || ++failures >= 3) offline.hidden = false;
+      })
       .then(function () { setTimeout(poll, POLL_MS); });
   }
 

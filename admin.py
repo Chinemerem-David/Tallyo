@@ -3,8 +3,8 @@ import csv
 import io
 from datetime import date
 
-from flask import (Blueprint, Response, abort, current_app, flash, redirect, render_template,
-                   request, send_file, session, url_for)
+from flask import (Blueprint, Response, abort, current_app, flash, jsonify, redirect,
+                   render_template, request, send_file, session, url_for)
 
 import attendance_service
 import auth
@@ -218,7 +218,7 @@ def _settings_page(values, errors=None, status=200):
     path = current_app.config["DATABASE"]
     return render_template(
         "admin_settings.html", values=values, errors=errors or {},
-        reader_state=reader.status(), last_tap=queries.last_tap(conn),
+        reader_state=reader.status(conn), last_tap=queries.last_tap(conn),
         records=queries.attendance_count(conn), backup=backup_service.status(path),
         today=date.today().isoformat(), **shell_context("Settings")), status
 
@@ -458,3 +458,35 @@ def reports():
 @admin_only
 def reports_export():
     return reporting.report_csv(db.get_db(), request.args)
+
+
+# ---- "Waiting for a card…": register or test a card by tapping it ---------------------
+
+@bp.route("/reader/listen", methods=["POST"])
+@admin_only
+def reader_listen():
+    auth.verify_csrf()
+    purpose = request.form.get("purpose", "register")
+    if purpose not in reader.PURPOSES:
+        abort(400)
+    reader.start_listening(db.get_db(), purpose)
+    return jsonify(ok=True)
+
+
+@bp.route("/reader/listen/cancel", methods=["POST"])
+@admin_only
+def reader_listen_cancel():
+    auth.verify_csrf()
+    reader.stop_listening(db.get_db())
+    return jsonify(ok=True)
+
+
+@bp.route("/reader/listen/status")
+@admin_only
+def reader_listen_status():
+    conn = db.get_db()
+    state = reader.listening(conn)
+    resp = jsonify({**state, "note": reader.card_note(conn, state["uid"]) if state["uid"] else None,
+                    "connected": reader.status(conn)["connected"]})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp

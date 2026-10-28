@@ -3,7 +3,7 @@ from the reader computer (localhost), from a browser that knows the secret kiosk
 or by a signed-in admin."""
 import hmac
 
-from flask import (Blueprint, abort, current_app, jsonify, redirect, render_template,
+from flask import (Blueprint, current_app, jsonify, redirect, render_template,
                    request, session, url_for)
 
 import db
@@ -29,7 +29,11 @@ def guard():
         session["kiosk_ok"] = True                          # remember this browser, then hide the key
         return redirect(url_for(request.endpoint))
     if not _allowed():
-        abort(403)
+        message = ("The kiosk screen only opens on the computer that has the card reader. "
+                   "To use it on another device, set TALLYO_KIOSK_KEY in the .env file, restart the app, "
+                   "and open /kiosk?key=YOUR_KEY once on that device. A signed-in admin can also open it.")
+        return render_template("error.html", code=403, title="The kiosk isn't available on this device",
+                               message=message), 403
 
 
 @bp.route("")

@@ -17,6 +17,10 @@ class CssTokens(unittest.TestCase):
         missing = {n: sorted(fs) for n, fs in used.items() if n not in defined}
         self.assertEqual(missing, {})
 
+    def test_the_hidden_attribute_really_hides(self):
+        base = (CSS_DIR / "base.css").read_text()
+        self.assertRegex(base, r"\[hidden\]\s*\{\s*display:\s*none\s*!important")
+
     def test_every_theme_colour_exists_in_both_themes(self):
         text = (CSS_DIR / "base.css").read_text()
         light = set(re.findall(r"(--[a-z0-9-]+)\s*:", text.split('html[data-theme="dark"]')[0]))

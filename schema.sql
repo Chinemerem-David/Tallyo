@@ -77,3 +77,18 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
     ('late_after', '09:00'),
     ('work_end', '17:00'),
     ('duplicate_window_seconds', '60');
+
+
+-- One row describing the RFID reader. The reader program (reader_bridge.py) updates it;
+-- the web app reads it to show "connected" and to run "tap a new card to register it".
+CREATE TABLE IF NOT EXISTS reader_status (
+    id             INTEGER PRIMARY KEY CHECK (id = 1),
+    state          TEXT NOT NULL DEFAULT 'disconnected' CHECK (state IN ('ok', 'fault', 'disconnected')),
+    port           TEXT,
+    detail         TEXT,
+    seen_at        TEXT,                      -- last sign of life from the reader program
+    listen_purpose TEXT CHECK (listen_purpose IN ('register', 'test')),
+    listen_until   TEXT,                      -- while set and in the future, the next tap is captured, not recorded
+    captured_uid   TEXT
+);
+INSERT OR IGNORE INTO reader_status (id) VALUES (1);

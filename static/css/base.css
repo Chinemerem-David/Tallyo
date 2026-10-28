@@ -109,6 +109,8 @@ body {
 }
 
 img, svg { display: block; max-width: 100%; }
+/* Our own display rules (like .btn) would otherwise beat the browser's rule for the hidden attribute. */
+[hidden] { display: none !important; }
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: var(--link); }
 

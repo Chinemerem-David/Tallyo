@@ -18,7 +18,13 @@ def connect(path=DEFAULT_DB):
     conn = sqlite3.connect(str(path), isolation_level=None, timeout=10)  # we run transactions ourselves
     conn.row_factory = sqlite3.Row            # rows behave like dicts: row["name"]
     conn.execute("PRAGMA foreign_keys = ON")  # SQLite ignores foreign keys unless asked
-    conn.execute("PRAGMA journal_mode = WAL") # readers don't block the writer
+    # The classic rollback journal, not WAL. Several programs share this database (the web app,
+    # the reader program, the simulator) and WAL needs shared memory that network drives and
+    # cloud-synced folders (OneDrive, Dropbox) don't provide, so other programs miss new writes.
+    try:
+        conn.execute("PRAGMA journal_mode = DELETE")
+    except sqlite3.OperationalError:
+        pass                                  # busy right now; the setting is applied on a later connection
     return conn
 
 

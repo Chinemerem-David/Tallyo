@@ -32,12 +32,15 @@
       <section class="card card-pad">
         <div class="row between">
           <h2 class="section-title">Reader</h2>
-          {% if reader_state.connected %}<span class="pill pill-ok">Connected</span>{% else %}<span class="pill pill-late">Not connected</span>{% endif %}
+          {% if reader_state.state == 'ok' %}<span class="pill pill-ok">Connected</span>
+          {% elif reader_state.state == 'fault' %}<span class="pill pill-bad">Fault</span>
+          {% else %}<span class="pill pill-late">Not connected</span>{% endif %}
         </div>
         <div class="kv mt-3"><span class="muted">Port</span><span>{{ reader_state.port or '–' }}</span></div>
         <div class="kv"><span class="muted">Last card tap</span><span>{{ last_tap | when(today) }}</span></div>
-        <p class="muted small mt-3">The RFID reader connects in the Arduino step. Until then, taps come from the simulator.</p>
-        <button class="btn btn-secondary mt-3" type="button" disabled>Test reader</button>
+        {% if reader_state.detail %}<p class="muted small mt-3">{{ reader_state.detail }}</p>{% endif %}
+        {% set listen_purpose = 'test' %}{% set listen_target = '' %}{% set listen_idle = 'Press Start listening, then tap any card to test the reader.' %}
+        <div class="mt-3">{% include "partials/listen_box.html" %}</div>
       </section>
 
       <section class="card card-pad">
@@ -57,3 +60,5 @@
     </div>
   </div>
 {% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/listen.js') }}"></script>{% endblock %}

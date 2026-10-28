@@ -42,6 +42,9 @@
       <h2 class="section-title">{{ 'Replace card' if current else 'Assign a card' }}</h2>
       {% if error %}<div class="alert alert-error mt-3" role="alert">{{ error }}</div>{% endif %}
 
+      {% set listen_purpose = 'register' %}{% set listen_target = '#uid_manual' %}{% set listen_idle = 'Tap the new card on the reader.' %}
+      <div class="mt-4">{% include "partials/listen_box.html" %}</div>
+
       <label class="field mt-4">
         <span class="field-label">Pick a card</span>
         <select class="input" name="uid_pick">
@@ -68,7 +71,7 @@
 
       <label class="field">
         <span class="field-label">Or type a card ID</span>
-        <input class="input" type="text" name="uid_manual" value="{{ manual }}" placeholder="A3 4F 91 0C"
+        <input class="input" type="text" id="uid_manual" name="uid_manual" value="{{ manual }}" placeholder="A3 4F 91 0C"
                autocomplete="off" spellcheck="false">
       </label>
 
@@ -89,3 +92,5 @@
     </form>
   </div>
 {% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/listen.js') }}"></script>{% endblock %}
