@@ -15,6 +15,26 @@ python app.py                     open http://127.0.0.1:5000
 Demo logins (pick the matching tab): `admin / admin123`, `chiamaka / hr123` (HR manager), `EMP-0142 / emp123` (Employee).
 `seed.py` wipes the database. Never run it on real data.
 
+## The .env file (your settings and secret key)
+1. In the project folder (next to `app.py`), copy `.env.example` to a new file named exactly `.env`
+   (Windows: `copy .env.example .env`). In Notepad, choose "All files" when saving, or it becomes `.env.txt` and is ignored.
+2. Make a secret key: `python -c "import secrets; print(secrets.token_hex(32))"` and paste the result:
+   `TALLYO_SECRET_KEY=paste-it-here`  (no spaces around `=`, no quotes).
+3. Restart the app. The warning "using the development secret key" disappears when it works.
+Changing the key signs everyone out, which is harmless. Never share `.env`; it is already ignored by version control.
+
+## Showing the kiosk on a phone while you use the PC
+The reader stays plugged into the PC. The phone is only a second screen.
+1. Put your phone and the PC on the **same Wi-Fi**.
+2. In `.env` add:  `TALLYO_HOST=0.0.0.0`  and  `TALLYO_KIOSK_KEY=pick-a-secret-word`  and restart the app.
+   Allow it through the Windows Firewall if it asks (choose "Private networks").
+3. Find the PC's address: `ipconfig`, then "IPv4 Address" (like 192.168.1.20).
+4. On the phone open `http://192.168.1.20:5000/kiosk?key=pick-a-secret-word` once. The phone remembers it.
+5. Keep using the PC normally at `http://127.0.0.1:5000`. Both work at the same time.
+Tips: set the phone's screen timeout to "never" (or keep it charging); "Add to Home screen" in the browser menu hides the address bar.
+Note: with `TALLYO_HOST=0.0.0.0` the login pages are reachable by everyone on that Wi-Fi. Use a trusted network and
+change the demo passwords first (Users page). Debug mode switches itself off, so restart the app after you change code.
+
 ## The pieces
 | Piece | Where | Who sees it |
 |---|---|---|

@@ -157,6 +157,20 @@ class Helpers(unittest.TestCase):
         self.assertEqual(server_settings({"TALLYO_PORT": "banana"}), ("127.0.0.1", 5000))
         self.assertEqual(server_settings({"TALLYO_PORT": "99999"})[1], 65535)
 
+    def test_debug_mode_is_only_on_by_default_for_this_computer(self):
+        from app import debug_enabled
+        self.assertTrue(debug_enabled("127.0.0.1", {}))
+        self.assertTrue(debug_enabled("localhost", {}))
+        self.assertFalse(debug_enabled("0.0.0.0", {}))                     # reachable from the network: off
+        self.assertFalse(debug_enabled("192.168.1.20", {}))
+        self.assertTrue(debug_enabled("0.0.0.0", {"TALLYO_DEBUG": "1"}))   # unless you insist
+        self.assertFalse(debug_enabled("127.0.0.1", {"TALLYO_DEBUG": "off"}))
+
+    def test_env_file_is_kept_out_of_version_control(self):
+        ignored = (Path(__file__).resolve().parent.parent / ".gitignore").read_text().split()
+        self.assertIn(".env", ignored)
+        self.assertIn("instance/", ignored)
+
     def test_simulator_warns_when_the_kiosk_will_ignore_the_tap(self):
         import subprocess
         root = Path(__file__).resolve().parent.parent

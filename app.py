@@ -157,10 +157,25 @@ def server_settings(environ=os.environ):
     return host, min(max(port, 1), 65535)
 
 
+def debug_enabled(host, environ=os.environ):
+    """Debug mode (auto-reload, detailed errors, a developer console) is only safe on this
+    computer. When other devices can reach the app it stays OFF unless you ask for it with
+    TALLYO_DEBUG=1."""
+    choice = (environ.get("TALLYO_DEBUG") or "").strip().lower()
+    if choice in ("1", "true", "yes", "on"):
+        return True
+    if choice in ("0", "false", "no", "off"):
+        return False
+    return host in ("127.0.0.1", "localhost", "::1")
+
+
 if __name__ == "__main__":
     startup_checks()
     host, port = server_settings()
+    debug = debug_enabled(host)
     print("Kiosk screen (on this computer): http://127.0.0.1:%d/kiosk" % port)
-    if host not in ("127.0.0.1", "localhost"):
+    if host not in ("127.0.0.1", "localhost", "::1"):
         print("Other devices can reach this app at http://<this computer's address>:%d" % port)
-    app.run(host=host, port=port, debug=True)
+        if not debug:
+            print("Debug mode is OFF because other devices can reach the app. Restart the app after you change code.")
+    app.run(host=host, port=port, debug=debug)
